@@ -1,0 +1,14 @@
+[package]
+name = "multilog"
+version = "0.1.0"
+authors = ["Lukas Krickl <lukas@krickl.dev>"]
+description = "Log-file monitor program"
+license = "MIT"
+homepage = "https://github.com/unlink2/octoforth"
+readme = "../README.md"
+
+[lib]
+name = "multilog"
+path = "src/lib.rs"
+
+[dependencies]
