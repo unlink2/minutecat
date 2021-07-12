@@ -2,6 +2,9 @@ use super::error::{BoxResult, InMemoryDataError};
 use super::serde::{Serialize, Deserialize};
 use super::typetag;
 
+/// A datasource knows how to fetch a logfile
+/// from a location e.g. local file system,
+/// ssh or http
 #[typetag::serde(tag = "type")]
 pub trait DataSource {
     fn load(&mut self) -> BoxResult<String>;
