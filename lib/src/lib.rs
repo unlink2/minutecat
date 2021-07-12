@@ -1,5 +1,6 @@
 extern crate serde;
 extern crate typetag;
+extern crate regex;
 
 pub mod logset;
 pub mod logfile;
