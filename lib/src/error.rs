@@ -21,3 +21,23 @@ impl fmt::Debug for InMemoryDataError {
         write!(f, "{}", self.to_string())
     }
 }
+
+pub struct TimeStringUnknownOperator;
+
+impl std::error::Error for TimeStringUnknownOperator {
+    fn description(&self) -> &str {
+        return "Unknonw operator";
+    }
+}
+
+impl fmt::Display for TimeStringUnknownOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+impl fmt::Debug for TimeStringUnknownOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
