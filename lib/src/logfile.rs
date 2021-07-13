@@ -12,6 +12,7 @@ pub trait EventHandler {
 
 #[derive(Serialize, Deserialize)]
 pub struct Logfile {
+    pub name: String,
     text: String,
     source: Box<dyn DataSource>,
     triggers: Vec<Box<dyn Trigger>>,
@@ -19,8 +20,9 @@ pub struct Logfile {
 }
 
 impl Logfile {
-    pub fn new(source: Box<dyn DataSource>, task: Task) -> Self {
+    pub fn new(name: &str, source: Box<dyn DataSource>, task: Task) -> Self {
         Self {
+            name: name.into(),
             text: "".into(),
             source,
             triggers: vec![],
@@ -100,6 +102,7 @@ mod tests {
     #[test]
     fn it_should_trigger_and_call_handlers() {
         let mut lf = Logfile::new(
+            "test",
             Box::new(InMemoryDataSource::new(vec![
                 "Test data with error".into(),
                 "Original test data success".into()])),
@@ -124,6 +127,7 @@ mod tests {
     #[test]
     fn it_should_not_trigger() {
         let mut lf = Logfile::new(
+            "test",
             Box::new(InMemoryDataSource::new(vec![
                 "Test data with error".into(),
                 "Original test data success".into()])),
