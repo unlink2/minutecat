@@ -145,7 +145,6 @@ impl Task {
         }
 
         let number = &time_str[start..*current];
-        println!("{}", number);
         Ok(TimeMs::from_str_radix(number, 10)?)
     }
 
@@ -167,6 +166,20 @@ impl Task {
         } else {
             false
         }
+    }
+
+    pub fn get_time_str(&self) -> String {
+        let mut remainder = self.delay;
+        let mut result = "".to_string();
+
+        let operators = vec![("h", 3600000), ("m", 60000), ("s", 1000), ("ms", 1)];
+
+        for (key, value) in operators {
+            result = format!("{}{}{}", result, remainder/value, key);
+            remainder = remainder % value;
+        }
+
+        return result;
     }
 }
 
@@ -217,5 +230,12 @@ mod tests {
     #[test]
     fn it_should_not_parse_time_str_bad_operator() {
         assert_eq!(Task::scan("1h20m10@5").unwrap_or(0), 0);
+    }
+
+    #[test]
+    fn it_should_revert_time_str() {
+        let ms = Task::from_str(false, "1h20m10s5",
+            Box::new(InMemoryTimeSource::new(vec![]))).unwrap();
+        assert_eq!(ms.get_time_str(), "1h20m10s5ms".to_string());
     }
 }
