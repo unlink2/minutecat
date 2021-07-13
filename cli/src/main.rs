@@ -1,5 +1,7 @@
 use std::io;
-use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
+use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen, event::Event, input::TermRead};
+use termion::async_stdin;
+use std::io::{Read, Write, stdout};
 use tui::{
     backend::TermionBackend,
     layout::{Constraint, Direction, Layout},
@@ -17,13 +19,26 @@ fn main() -> Result<(), io::Error> {
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    let mut stdin = async_stdin().bytes();
 
-    terminal.draw(|f| {
-        let size = f.size();
-        let block = Block::default()
-            .title("Block")
-            .borders(Borders::ALL);
-        f.render_widget(block, size);
-    })?;
+    let mut i = 0;
+    loop {
+        i += 1;
+        terminal.draw(|f| {
+            let size = f.size();
+            let block = Block::default()
+                .title(format!("{}", i))
+                .borders(Borders::ALL);
+            f.render_widget(block, size);
+        })?;
+
+        // input handler
+
+        match stdin.next() {
+            Some(Ok(b'q')) => break,
+            _ => {}
+        }
+    }
+
     Ok(())
 }
