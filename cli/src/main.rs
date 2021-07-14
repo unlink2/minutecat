@@ -1,6 +1,8 @@
-use std::io;
-use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen, event::Event, input::TermRead};
-use termion::async_stdin;
+mod event;
+
+use event::{Event, Events};
+use std::{error::Error, io};
+use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen, input::TermRead};
 use std::io::{Read, Write, stdout};
 use tui::{
     backend::TermionBackend,
@@ -11,7 +13,7 @@ use tui::{
     Terminal,
 };
 
-fn main() -> Result<(), io::Error> {
+fn main() -> Result<(), Box<dyn Error>> {
     // Terminal initialization
     let stdout = io::stdout().into_raw_mode()?;
     let stdout = MouseTerminal::from(stdout);
@@ -19,7 +21,7 @@ fn main() -> Result<(), io::Error> {
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut stdin = async_stdin().bytes();
+    let events = Events::new();
 
     let mut i = 0;
     loop {
@@ -32,11 +34,13 @@ fn main() -> Result<(), io::Error> {
             f.render_widget(block, size);
         })?;
 
-        // input handler for immediate commands
-
-        match stdin.next() {
-            Some(Ok(b'q')) => break,
-            _ => {}
+        if let Event::Input(input) = events.next()? {
+            match input {
+                Key::Char('q') => {
+                    break;
+                }
+                _ => {}
+            }
         }
     }
 
