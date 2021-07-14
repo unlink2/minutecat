@@ -32,7 +32,7 @@ fn main() -> Result<(), io::Error> {
             f.render_widget(block, size);
         })?;
 
-        // input handler
+        // input handler for immediate commands
 
         match stdin.next() {
             Some(Ok(b'q')) => break,
