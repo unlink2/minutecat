@@ -1,14 +1,14 @@
 [package]
-name = "multilog"
+name = "minutecat"
 version = "0.1.0"
 authors = ["Lukas Krickl <lukas@krickl.dev>"]
 description = "Log-file monitor program"
 license = "MIT"
-homepage = "https://github.com/unlink2/octoforth"
+homepage = "https://github.com/unlink2/minutecat"
 readme = "../README.md"
 
 [lib]
-name = "multilog"
+name = "minutecat"
 path = "src/lib.rs"
 
 [dependencies]

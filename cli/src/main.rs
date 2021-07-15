@@ -1,4 +1,10 @@
 mod event;
+mod app;
+mod tab;
+
+extern crate termion;
+extern crate tui;
+extern crate minutecat;
 
 use event::{Event, Events};
 use std::{error::Error, io};
