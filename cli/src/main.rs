@@ -1,4 +1,4 @@
-mod event;
+pub mod event;
 mod app;
 mod tab;
 
@@ -10,8 +10,7 @@ extern crate chrono;
 use app::App;
 use event::{Event, Events};
 use std::{error::Error, io};
-use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen, input::TermRead};
-use std::io::{Read, Write, stdout};
+use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::TermionBackend,
     layout::{Constraint, Direction, Layout},
@@ -21,9 +20,9 @@ use tui::{
     Terminal,
 };
 use chrono::prelude::DateTime;
-use chrono::{Utc, Local};
+use chrono::Local;
 use minutecat::interface::command_line;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{UNIX_EPOCH, Duration};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let interface = command_line()?;
@@ -99,7 +98,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             match input {
                 Key::Char('q') => {
                     break;
-                }
+                },
+                Key::Right => app.tabs.next(),
+                Key::Left => app.tabs.prev(),
                 _ => {}
             }
         }
