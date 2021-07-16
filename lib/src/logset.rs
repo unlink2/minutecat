@@ -47,7 +47,7 @@ impl LogSet {
     }
 
     pub fn remove(&mut self, index: usize) -> Option<Logfile> {
-        if self.logs.len() < index {
+        if self.logs.len() > index {
             Some(self.logs.remove(index))
         } else {
             None
