@@ -2,8 +2,7 @@ use super::error::{BoxResult, InMemoryDataError};
 use super::serde::{Serialize, Deserialize};
 use super::typetag;
 use std::fs::File;
-use std::io::{BufRead, Read};
-use std::io::BufReader;
+use std::io::Read;
 use std::path::Path;
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -152,18 +151,7 @@ impl DataSource for FileDataSource {
         let file = File::open(Path::new(&self.path))?;
         let mut rev_reader = TailReader::new(file,self.line_limit);
 
-        /* let content = BufReader::new(&file);
-        let mut lines = content.lines();
-
-
-
-        // count lines
-        content.bytes();
-
-        // TODO reverse iterator of lines and reduce to single \n separated string
-        lines.nth(self.line_limit).expect("No line found at that position");
-        */
-        Ok("".into())
+        return Ok(rev_reader.read_lines()?);
     }
 }
 

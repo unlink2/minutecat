@@ -19,8 +19,10 @@ use tui::{
     widgets::{Block, Borders, Tabs},
     Terminal,
 };
+use minutecat::interface::command_line;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let interface = command_line()?;
     // Terminal initialization
     let stdout = io::stdout().into_raw_mode()?;
     let stdout = MouseTerminal::from(stdout);
@@ -30,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let events = Events::new();
 
-    let app = App::new();
+    let app = App::new(interface);
 
     loop {
         terminal.draw(|f| {
@@ -48,8 +50,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             // get tab titles
             let titles: Vec<Spans> = app
-                .tabs
-                .logs.logs
+                .interface.logset.logs
                 .iter()
                 .map(|t| {
                     let (first, rest) = t.name.split_at(1);
@@ -82,6 +83,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
+
+    // always save in the end!
+    app.interface.logset.to_file(&app.interface.cfg_path)?;
 
     Ok(())
 }

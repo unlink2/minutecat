@@ -1,10 +1,12 @@
 use super::serde::{Serialize, Deserialize};
-use super::typetag;
 use super::logfile::Logfile;
 use super::error::BoxResult;
 use super::serde_yaml;
-use std::fs;
+use std::fs::File;
 use std::io::Write;
+use std::io::Read;
+use std::str;
+use std::path::Path;
 
 #[derive(Serialize, Deserialize)]
 pub struct LogSet {
@@ -18,8 +20,17 @@ impl LogSet {
         }
     }
 
-    pub fn from_file(path: &str) -> BoxResult<Self> {
-        let s = fs::read_to_string(path)?;
+    pub fn from_path(path: &str) -> BoxResult<Self> {
+        match File::open(Path::new(&path)) {
+            Ok(mut file) => Self::from_reader(&mut file),
+            Err(_err) => Ok(Self::new())
+        }
+    }
+
+    pub fn from_reader(reader: &mut dyn Read) -> BoxResult<Self> {
+        let mut r = vec![];
+        reader.read_to_end(&mut r)?;
+        let s = str::from_utf8(&r)?;
         Self::deserialize(&s)
     }
 

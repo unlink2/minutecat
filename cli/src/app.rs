@@ -1,4 +1,5 @@
 use super::tab::TabManager;
+use super::minutecat::interface::Interface;
 use std::{error::Error, io};
 use super::termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use super::tui::{
@@ -11,13 +12,15 @@ use super::tui::{
 };
 
 pub struct App {
-    pub tabs: TabManager
+    pub tabs: TabManager,
+    pub interface: Interface
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(interface: Interface) -> Self {
         Self {
-            tabs: TabManager::new()
+            tabs: TabManager::new(),
+            interface
         }
     }
 }
