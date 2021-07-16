@@ -13,7 +13,7 @@ pub trait EventHandler {
 #[derive(Serialize, Deserialize)]
 pub struct Logfile {
     pub name: String,
-    text: String,
+    pub text: String,
     source: Box<dyn DataSource>,
     triggers: Vec<Box<dyn Trigger>>,
     task: Task,

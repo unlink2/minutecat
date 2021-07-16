@@ -16,7 +16,7 @@ use tui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
-    widgets::{Block, Borders, Tabs},
+    widgets::{Block, Borders, Paragraph, Tabs, Wrap},
     Terminal,
 };
 use minutecat::interface::command_line;
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let events = Events::new();
 
-    let app = App::new(interface);
+    let mut app = App::new(interface);
 
     loop {
         terminal.draw(|f| {
@@ -72,7 +72,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .bg(Color::Black),
                 );
             f.render_widget(tabs, chunks[0]);
+
+            let log = &app.interface.logset.logs[app.tabs.index];
+            // render content
+            let content = Paragraph::new(log.text.clone())
+                .block(Block::default().borders(Borders::ALL).title(log.name.clone()))
+                .wrap(Wrap { trim: true });
+            f.render_widget(content, chunks[1]);
         })?;
+
+        // update logs
+        for log in &mut app.interface.logset.logs {
+            log.update(&mut vec![])?;
+        }
 
         if let Event::Input(input) = events.next()? {
             match input {
