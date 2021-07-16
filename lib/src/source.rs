@@ -1,6 +1,13 @@
 use super::error::{BoxResult, InMemoryDataError};
 use super::serde::{Serialize, Deserialize};
 use super::typetag;
+use std::fs::File;
+use std::io::{BufRead, Read};
+use std::io::BufReader;
+use std::path::Path;
+use std::io::prelude::*;
+use std::io::SeekFrom;
+use std::str;
 
 /// A datasource knows how to fetch a logfile
 /// from a location e.g. local file system,
@@ -38,4 +45,159 @@ impl DataSource for InMemoryDataSource {
     }
 }
 
+/**
+ * File data input
+ */
+
+/**
+ * Takes an input buffer and reads the bottom n lines backwards
+ */
+pub struct TailReader<T>
+where T: Read + Seek {
+    input: T,
+    line_limit: usize,
+    chunk_size: u64
+}
+
+impl<T> TailReader<T>
+where T: Read + Seek {
+    pub fn new(input: T, line_limit: usize) -> Self {
+        Self {
+            input,
+            line_limit,
+            chunk_size: 64
+        }
+    }
+
+    fn read_chunk(&mut self, chunk_size: usize) -> BoxResult<(usize, String)> {
+        let mut buf = vec![0u8; chunk_size];
+        self.input.read_exact(&mut buf)?;
+
+        let result = str::from_utf8(&buf)?;
+
+        Ok((self.count_lines(&result), result.into()))
+    }
+
+    fn count_lines(&self, strbuf: &str) -> usize {
+        strbuf.matches("\n").count()
+    }
+
+    fn trim(&self, strbuf: &str) -> Option<usize> {
+        strbuf.find("\n")
+    }
+
+    pub fn read_lines(&mut self) -> BoxResult<String> {
+        // seek backwards in chunk increments
+        // until enough new line characters have been found
+
+        // get total file size
+        let mut seek_pos = self.input.seek(SeekFrom::End(0))?;
+
+        let mut lines = 0;
+        let mut strbuf = "".to_string();
+
+        // seek in reverse until seek_pos is either 0, or all required lines have been read
+        while seek_pos > 0 && lines <= self.line_limit {
+            let chunk_size;
+            if seek_pos < self.chunk_size {
+                chunk_size = seek_pos;
+                seek_pos = 0;
+            } else {
+                seek_pos = seek_pos - self.chunk_size;
+                chunk_size = self.chunk_size;
+            }
+
+            self.input.seek(SeekFrom::Start(seek_pos))?;
+            let (line_count, mut result) = self.read_chunk(chunk_size as usize)?;
+
+            result.push_str(&strbuf);
+            strbuf = result;
+            lines += line_count;
+        }
+
+        let mut slice = &strbuf[..];
+        // count new lines and trim
+        while self.count_lines(slice) >= self.line_limit {
+            match self.trim(slice) {
+                Some(pos) => {
+                    slice = &slice[pos+1..]
+                },
+                _ => break // out of lines
+            }
+        }
+
+        return Ok(slice.into());
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FileDataSource {
+    line_limit: usize,
+    path: String
+}
+
+impl FileDataSource {
+    pub fn new(path: &str, line_limit: usize) -> Self {
+        Self {
+            path: path.into(),
+            line_limit
+        }
+    }
+}
+
+
+#[typetag::serde]
+impl DataSource for FileDataSource {
+    fn load(&mut self) -> BoxResult<String> {
+        let file = File::open(Path::new(&self.path))?;
+        let mut rev_reader = TailReader::new(file,self.line_limit);
+
+        /* let content = BufReader::new(&file);
+        let mut lines = content.lines();
+
+
+
+        // count lines
+        content.bytes();
+
+        // TODO reverse iterator of lines and reduce to single \n separated string
+        lines.nth(self.line_limit).expect("No line found at that position");
+        */
+        Ok("".into())
+    }
+}
+
 // TODO this be tested in a sane way at all?
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn it_should_read_files_in_reverse_up_to_limit() {
+        let mut rev_reader = TailReader::new(Cursor::new("Data\nWith\nNew\nLines\nFor\nUnit\nTests"), 3);
+        rev_reader.chunk_size = 4; // for testing we lower chunk size
+
+        let lines = rev_reader.read_lines().unwrap();
+        assert_eq!(lines, "For\nUnit\nTests");
+    }
+
+    #[test]
+    fn it_should_read_files_in_reverse_up_to_start() {
+        let mut rev_reader = TailReader::new(Cursor::new("Data\nWith\nNew\nLines"), 10);
+        rev_reader.chunk_size = 4; // for testing we lower chunk size
+
+        let lines = rev_reader.read_lines().unwrap();
+        assert_eq!(lines, "Data\nWith\nNew\nLines");
+    }
+
+    #[test]
+    fn it_should_read_files_in_reverse_up_to_start_when_chunk_is_larger_than_file() {
+        let mut rev_reader = TailReader::new(Cursor::new("Data\nWith\nNew\nLines"), 10);
+
+        let lines = rev_reader.read_lines().unwrap();
+        assert_eq!(lines, "Data\nWith\nNew\nLines");
+    }
+}
+

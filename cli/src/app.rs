@@ -11,5 +11,13 @@ use super::tui::{
 };
 
 pub struct App {
-    tabs: TabManager
+    pub tabs: TabManager
+}
+
+impl App {
+    pub fn new() -> Self {
+        Self {
+            tabs: TabManager::new()
+        }
+    }
 }

@@ -6,6 +6,7 @@ extern crate termion;
 extern crate tui;
 extern crate minutecat;
 
+use app::App;
 use event::{Event, Events};
 use std::{error::Error, io};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen, input::TermRead};
@@ -29,15 +30,47 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let events = Events::new();
 
-    let mut i = 0;
+    let app = App::new();
+
     loop {
-        i += 1;
         terminal.draw(|f| {
             let size = f.size();
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .margin(1)
+                .constraints([Constraint::Length(3),Constraint::Min(0)].as_ref())
+                .split(size);
+
+            // outside border
             let block = Block::default()
-                .title(format!("{}", i))
                 .borders(Borders::ALL);
             f.render_widget(block, size);
+
+            // get tab titles
+            let titles: Vec<Spans> = app
+                .tabs
+                .logs.logs
+                .iter()
+                .map(|t| {
+                    let (first, rest) = t.name.split_at(1);
+                    Spans::from(vec![
+                        Span::styled(first, Style::default().fg(Color::Yellow)),
+                        Span::styled(rest, Style::default().fg(Color::Green)),
+                    ])
+                })
+                .collect();
+
+            // render tabs
+            let tabs = Tabs::new(titles)
+                .block(Block::default().borders(Borders::ALL).title("Tabs"))
+                .select(app.tabs.index)
+                .style(Style::default().fg(Color::Cyan))
+                .highlight_style(
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .bg(Color::Black),
+                );
+            f.render_widget(tabs, chunks[0]);
         })?;
 
         if let Event::Input(input) = events.next()? {
