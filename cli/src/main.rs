@@ -76,19 +76,29 @@ fn main() -> Result<(), Box<dyn Error>> {
                 );
             f.render_widget(tabs, chunks[0]);
 
-            let log = &app.interface.logset.logs[app.tabs.index];
+            if app.interface.logset.len() == 0 {
+                let content = Paragraph::new("No Logs")
+                    .block(Block::default().borders(Borders::ALL).title(
+                            "No Logs"))
+                    .wrap(Wrap { trim: true })
+                    .alignment(Alignment::Left)
+                    .scroll(app.tabs.scroll);
+                f.render_widget(content, chunks[1]);
+            } else {
+                let log = &app.interface.logset.logs[app.tabs.index];
 
-            let d = UNIX_EPOCH + Duration::from_millis(log.task.next_time() as u64);
-            let datetime = DateTime::<Local>::from(d);
+                let d = UNIX_EPOCH + Duration::from_millis(log.task.next_time() as u64);
+                let datetime = DateTime::<Local>::from(d);
 
-            // render content
-            let content = Paragraph::new(log.text.clone())
-                .block(Block::default().borders(Borders::ALL).title(
-                        format!("{} Next: {}", log.name.clone(), datetime.format("%Y-%m-%d %H:%M:%S"))))
-                .wrap(Wrap { trim: true })
-                .alignment(Alignment::Left)
-                .scroll(app.tabs.scroll);
-            f.render_widget(content, chunks[1]);
+                // render content
+                let content = Paragraph::new(log.text.clone())
+                    .block(Block::default().borders(Borders::ALL).title(
+                            format!("{} Next: {}", log.name.clone(), datetime.format("%Y-%m-%d %H:%M:%S"))))
+                    .wrap(Wrap { trim: true })
+                    .alignment(Alignment::Left)
+                    .scroll(app.tabs.scroll);
+                f.render_widget(content, chunks[1]);
+            }
         })?;
 
         // update logs
