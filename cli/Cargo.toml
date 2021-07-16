@@ -1,18 +1,19 @@
 [package]
-name = "multilog-cli"
+name = "minutecat-cli"
 version = "0.1.0"
 authors = ["Lukas Krickl <lukas@krickl.dev>"]
 description = "multilog cli"
 license = "MIT"
-homepage = "https://github.com/unlink2/octoforth"
+homepage = "https://github.com/unlink2/minutecat"
 edition = "2018"
 
 [[bin]]
-name = "multilog"
+name = "minutecat"
 path = "src/main.rs"
 
 [dependencies]
-multilog = {path = "../lib"}
+minutecat = {path = "../lib"}
 clap = "3.0.0-beta.2"
 tui = "0.15"
 termion = "1.5"
+chrono = "0.4.19"

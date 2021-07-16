@@ -157,9 +157,13 @@ impl Task {
             (c >= 'A' && c <= 'Z')
     }
 
+    pub fn next_time(&self) -> u128 {
+        self.start+self.delay
+    }
+
     pub fn is_due(&mut self) -> bool {
         if !self.done
-            && self.start+self.delay < self.time_src.get_time_ms() {
+            && self.next_time() < self.time_src.get_time_ms() {
             self.done = !self.repeat; // if no repeate set to done
             self.start = self.time_src.get_time_ms(); // next start time
             true
