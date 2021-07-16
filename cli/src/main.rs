@@ -5,6 +5,7 @@ mod tab;
 extern crate termion;
 extern crate tui;
 extern crate minutecat;
+extern crate chrono;
 
 use app::App;
 use event::{Event, Events};
@@ -19,7 +20,10 @@ use tui::{
     widgets::{Block, Borders, Paragraph, Tabs, Wrap},
     Terminal,
 };
+use chrono::prelude::DateTime;
+use chrono::{Utc, Local};
 use minutecat::interface::command_line;
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let interface = command_line()?;
@@ -74,9 +78,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             f.render_widget(tabs, chunks[0]);
 
             let log = &app.interface.logset.logs[app.tabs.index];
+
+            let d = UNIX_EPOCH + Duration::from_millis(log.task.next_time() as u64);
+            let datetime = DateTime::<Local>::from(d);
+
             // render content
             let content = Paragraph::new(log.text.clone())
-                .block(Block::default().borders(Borders::ALL).title(log.name.clone()))
+                .block(Block::default().borders(Borders::ALL).title(
+                        format!("{} Next: {}", log.name.clone(), datetime.format("%Y-%m-%d %H:%M:%S"))))
                 .wrap(Wrap { trim: true });
             f.render_widget(content, chunks[1]);
         })?;

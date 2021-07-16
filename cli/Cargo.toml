@@ -16,3 +16,4 @@ minutecat = {path = "../lib"}
 clap = "3.0.0-beta.2"
 tui = "0.15"
 termion = "1.5"
+chrono = "0.4.19"

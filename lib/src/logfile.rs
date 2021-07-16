@@ -16,7 +16,7 @@ pub struct Logfile {
     pub text: String,
     source: Box<dyn DataSource>,
     triggers: Vec<Box<dyn Trigger>>,
-    task: Task,
+    pub task: Task,
 }
 
 impl Logfile {
