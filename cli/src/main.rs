@@ -13,7 +13,7 @@ use std::{error::Error, io};
 use termion::{event::Key, input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
 use tui::{
     backend::TermionBackend,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Alignment},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
     widgets::{Block, Borders, Paragraph, Tabs, Wrap},
@@ -85,7 +85,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             let content = Paragraph::new(log.text.clone())
                 .block(Block::default().borders(Borders::ALL).title(
                         format!("{} Next: {}", log.name.clone(), datetime.format("%Y-%m-%d %H:%M:%S"))))
-                .wrap(Wrap { trim: true });
+                .wrap(Wrap { trim: true })
+                .alignment(Alignment::Left)
+                .scroll(app.tabs.scroll);
             f.render_widget(content, chunks[1]);
         })?;
 
@@ -101,6 +103,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 },
                 Key::Right => app.tabs.next(),
                 Key::Left => app.tabs.prev(),
+                Key::Up => app.tabs.down(),
+                Key::Down => app.tabs.up(),
                 _ => {}
             }
         }

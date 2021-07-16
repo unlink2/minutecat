@@ -36,7 +36,13 @@ pub struct Opts {
 #[derive(Clap)]
 pub enum SubCommand {
     #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
-    Add(Add)
+    Add(Add),
+
+    #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
+    List(List),
+
+    #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
+    Delete(Delete)
 }
 
 #[derive(Clap)]
@@ -46,6 +52,14 @@ pub struct Add {
     line_limit: usize,
     logtype: String,
     refresh_time: String
+}
+
+#[derive(Clap)]
+pub struct List;
+
+#[derive(Clap)]
+pub struct Delete {
+    pub index: usize
 }
 
 // TODO allow user to move config path?
@@ -72,8 +86,9 @@ pub fn command_line() -> BoxResult<Interface> {
     match &options.subcmd {
         Some(subcmd) => {
             match &subcmd {
-                SubCommand::Add(add) =>
-                    add_cmd(&add, &mut logset)?
+                SubCommand::Add(add) => add_cmd(&add, &mut logset)?,
+                SubCommand::List(list) => list_cmd(&list, &mut logset)?,
+                SubCommand::Delete(delete) => delete_cmd(&delete, &mut logset)?
             }
         },
         _ => {}
@@ -97,5 +112,18 @@ pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<()> {
         }
         _ => println!("Invalid logfile type!")
     }
+    Ok(())
+}
+
+pub fn list_cmd(_list: &List, logset: &mut LogSet) -> BoxResult<()> {
+    for (i, log) in logset.logs.iter().enumerate() {
+        println!("{}: {}", i, log.name);
+    }
+
+    std::process::exit(0);
+}
+
+pub fn delete_cmd(delete: &Delete, logset: &mut LogSet) -> BoxResult<()> {
+    logset.remove(delete.index);
     Ok(())
 }
