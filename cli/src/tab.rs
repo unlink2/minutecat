@@ -1,5 +1,22 @@
+use super::minutecat::trigger::TriggerType;
+use super::minutecat::logfile::EventHandler;
+use super::minutecat::trigger::Trigger;
+
+#[derive(Clone)]
+pub struct TabState {
+    pub trigger_type: TriggerType
+}
+
+impl TabState {
+    pub fn new() -> Self {
+        Self {
+            trigger_type: TriggerType::NoEvent
+        }
+    }
+}
 
 pub struct TabManager {
+    pub state: Vec<TabState>,
     pub max: usize,
     pub index: usize,
     pub scroll: (u16, u16)
@@ -8,6 +25,7 @@ pub struct TabManager {
 impl TabManager {
     pub fn new(max: usize) -> Self {
         Self {
+            state: vec![TabState::new(); max],
             index: 0,
             max,
             scroll: (0, 0)
@@ -42,5 +60,11 @@ impl TabManager {
         } else {
             self.index -= 1;
         }
+    }
+}
+
+impl EventHandler for TabState {
+    fn on_event(&mut self, trigger: &dyn Trigger, _text: &str) {
+        self.trigger_type = trigger.get_type();
     }
 }

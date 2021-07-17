@@ -1,5 +1,5 @@
 use super::serde::{Serialize, Deserialize};
-use super::logfile::Logfile;
+use super::logfile::{Logfile, EventHandler};
 use super::error::BoxResult;
 use super::serde_yaml;
 use std::fs::File;
@@ -56,6 +56,13 @@ impl LogSet {
 
     pub fn len(&self) -> usize {
         self.logs.len()
+    }
+
+    pub fn update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
+        for log in &mut self.logs {
+            log.update(handlers)?;
+        }
+        Ok(true)
     }
 
     pub fn serialize(&self) -> BoxResult<String> {

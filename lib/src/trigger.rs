@@ -8,6 +8,7 @@ use super::regex::Regex;
 /// a warning or success
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize, Copy, Clone)]
 pub enum TriggerType {
+    NoEvent,
     Success,
     Warning,
     Error

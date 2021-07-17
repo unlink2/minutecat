@@ -59,7 +59,10 @@ impl Logfile {
         if !self.task.is_due() {
             return Ok(false);
         }
+        self.force_update(handlers)
+    }
 
+    pub fn force_update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
         // if so refresh source
         self.text = self.source.as_mut().load()?;
 
@@ -85,6 +88,8 @@ impl Logfile {
     }
 }
 
+// TODO test push,pop and remove
+// TODO test update
 #[cfg(test)]
 mod tests {
     use super::*;
