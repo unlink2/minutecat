@@ -1,6 +1,8 @@
 
 # minutecat
 
+![](https://github.com/unlink2/minutecat/actions/workflows/build.yml/badge.svg)
+![](https://github.com/unlink2/minutecat/actions/workflows/test.yml/badge.svg)
 
 ## Table of content
 
