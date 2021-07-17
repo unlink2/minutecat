@@ -15,7 +15,7 @@ pub struct Logfile {
     pub name: String,
     pub text: String,
     source: Box<dyn DataSource>,
-    triggers: Vec<Box<dyn Trigger>>,
+    pub triggers: Vec<Box<dyn Trigger>>,
     pub task: Task,
 }
 
@@ -39,7 +39,7 @@ impl Logfile {
     }
 
     pub fn remove(&mut self, index: usize) -> Option<Box<dyn Trigger>> {
-        if self.triggers.len() < index {
+        if self.triggers.len() > index {
             Some(self.triggers.remove(index))
         } else {
             None
