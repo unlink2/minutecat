@@ -18,7 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install xmllint
+    - name: Install fltk
       run: sudo apt-get install libfltk1.3-dev
     - name: Build
       run: cargo build --verbose
