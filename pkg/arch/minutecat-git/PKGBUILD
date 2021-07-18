@@ -1,7 +1,6 @@
 # Maintainer: Lukas Krickl <lukas@krickl.dev>
 pkgname=minutecat
 BRANCH=main
-FRONTEND=cli
 pkgver=0.1.0
 pkgrel=1
 pkgdesc="A simple logfile monitor for the command line"
@@ -22,21 +21,19 @@ build() {
   cd $srcdir
   unzip "$pkgname-$pkgver.zip"
 
-  cd "$pkgname-$BRANCH/$FRONTEND"
+  cd "$pkgname-$BRANCH"
 
-  RUSTUP_TOOLCHAIN=stable cargo build --release
+  RUSTUP_TOOLCHAIN=stable cargo build --release --bin "$pkgname"
 }
 
 check() {
-  cd "$pkgname-$BRANCH/$FRONTEND"
+  cd "$pkgname-$BRANCH"
 
-  RUSTUP_TOOLCHAIN=stable cargo test --release
+  RUSTUP_TOOLCHAIN=stable cargo test --release --lib
 }
 
 package() {
-  cd "$pkgname-$BRANCH/$FRONTEND"
-  pwd
-  ls
+  cd "$pkgname-$BRANCH"
 
   install -Dm755 "target/release/$pkgname" "$pkgdir/usr/bin/$pkgname"
 
