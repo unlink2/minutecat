@@ -22,22 +22,22 @@ build() {
   cd $srcdir
   unzip "$pkgname-$pkgver.zip"
 
-  cd "$pkgname-$pkgver/$frontend"
+  cd "$pkgname-$BRANCH/$frontend"
 
   RUSTUP_TOOLCHAIN=stable cargo build --release --locked
 }
 
 check() {
-  cd "$pkgname-$pkgver/$frontend"
+  cd "$pkgname-$BRANCH/$frontend"
 
   RUSTUP_TOOLCHAIN=stable cargo test --release --locked
 }
 
 package() {
-  cd "$pkgname-$pkgver/$frontend"
+  cd "$pkgname-$BRANCH/$frontend"
   local OUT_DIR=$(<out_dir)
 
-  install -Dm755 "target/release/minutecat" "$pkgdir/usr/bin/minutecat"
+  install -Dm755 "target/release/$pkgname" "$pkgdir/usr/bin/$pkgname"
 
   install -Dm644 "README.md" "$pkgdir/usr/share/doc/${pkgname}/README.md"
   install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"
