@@ -10,11 +10,15 @@ url="https://github.com/unkink2/minutecat"
 license=('MIT')
 depends=()
 # depends=(libx11 libxext libxft libxinerama libxcursor libxrender libxfixes libpng pango cairo libgl mesa)
-makedepends=('cargo')
+makedepends=('cargo', 'unzip')
 source=("$pkgname-$pkgver.zip::https://github.com/unlink2/${pkgname}/archive/refs/heads/${BRANCH}.zip")
+noextract=("$pkgname-$pkgver")
 sha512sums=("SKIP")
 
 build() {
+  cd $srcdir
+  unzip "$pkgname-$pkgver.zip"
+
   cd "$pkgname-$pkgver/$frontend"
 
   RUSTUP_TOOLCHAIN=stable cargo build --release --locked
