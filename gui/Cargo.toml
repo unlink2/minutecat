@@ -13,5 +13,4 @@ path = "src/main.rs"
 
 [dependencies]
 minutecat = {path = "../lib"}
-clap = "3.0.0-beta.2"
-fltk = "1.1.0"
+orbtk = { git = "https://github.com/redox-os/orbtk.git", branch = "develop" }
