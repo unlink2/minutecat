@@ -1,5 +1,5 @@
 
-name: Build
+name: PkgBuild
 
 on:
   push:
@@ -20,5 +20,5 @@ jobs:
     - name: Arch Linux PKGBUILD builder action
       uses: 2m/arch-pkgbuild-builder@v1.16
       with:
-        pkgname: '/pkg/arch/minutecat-git/'
+        pkgname: 'pkg/arch/minutecat-git/'
         target: 'pkgbuild'
