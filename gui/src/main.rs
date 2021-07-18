@@ -1,7 +1,9 @@
 extern crate orbtk;
 
 mod local;
+mod listview;
 
+use listview::LogListView;
 use orbtk::prelude::*;
 
 fn main() {
@@ -16,7 +18,7 @@ fn main() {
             Window::new()
                 .title("minutecat desktop")
                 .size(420.0, 730.0)
-                .child(TextBlock::new().text("HELLO_WORLD").build(ctx))
+                .child(LogListView::new().build(ctx))
                 .build(ctx)
         })
     .run();
