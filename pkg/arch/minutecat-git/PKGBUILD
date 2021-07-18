@@ -24,13 +24,13 @@ build() {
 
   cd "$pkgname-$BRANCH/$frontend"
 
-  RUSTUP_TOOLCHAIN=stable cargo build --release --locked
+  RUSTUP_TOOLCHAIN=stable cargo build --release
 }
 
 check() {
   cd "$pkgname-$BRANCH/$frontend"
 
-  RUSTUP_TOOLCHAIN=stable cargo test --release --locked
+  RUSTUP_TOOLCHAIN=stable cargo test --release
 }
 
 package() {
