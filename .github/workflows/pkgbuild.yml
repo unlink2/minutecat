@@ -11,11 +11,12 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  atch:
 
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v1
       # build an arch linux package for cli
     - name: Arch Linux PKGBUILD builder action
       uses: 2m/arch-pkgbuild-builder@v1.16
