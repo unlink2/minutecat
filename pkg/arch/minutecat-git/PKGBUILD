@@ -1,5 +1,7 @@
 # Maintainer: Lukas Krickl <lukas@krickl.dev>
-pkgname=minutecat
+pkgname=minutecat-git
+binname=minutecat
+progname=minutecat
 BRANCH=main
 pkgver=0.1.0
 pkgrel=1
@@ -10,8 +12,8 @@ license=('MIT')
 depends=()
 # depends=(libx11 libxext libxft libxinerama libxcursor libxrender libxfixes libpng pango cairo libgl mesa)
 makedepends=('rustup' 'unzip')
-source=("$pkgname-$pkgver.zip::https://github.com/unlink2/${pkgname}/archive/refs/heads/${BRANCH}.zip")
-noextract=("$pkgname-$pkgver.zip")
+source=("$progname-$pkgver.zip::https://github.com/unlink2/${progname}/archive/refs/heads/${BRANCH}.zip")
+noextract=("$progname-$pkgver.zip")
 sha512sums=("SKIP")
 
 build() {
@@ -19,24 +21,24 @@ build() {
   rustup default stable
 
   cd $srcdir
-  unzip "$pkgname-$pkgver.zip"
+  unzip "$progname-$pkgver.zip"
 
-  cd "$pkgname-$BRANCH"
+  cd "$progname-$BRANCH"
 
-  RUSTUP_TOOLCHAIN=stable cargo build --release --bin "$pkgname"
+  RUSTUP_TOOLCHAIN=stable cargo build --release --bin "$binname"
 }
 
 check() {
-  cd "$pkgname-$BRANCH"
+  cd "$progname-$BRANCH"
 
   RUSTUP_TOOLCHAIN=stable cargo test --release --lib
 }
 
 package() {
-  cd "$pkgname-$BRANCH"
+  cd "$progname-$BRANCH"
 
-  install -Dm755 "target/release/$pkgname" "$pkgdir/usr/bin/$pkgname"
+  install -Dm755 "target/release/$binname" "$pkgdir/usr/bin/$binname"
 
-  install -Dm644 "README.md" "$pkgdir/usr/share/doc/${pkgname}/README.md"
-  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 "README.md" "$pkgdir/usr/share/doc/${binname}/README.md"
+  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/${binname}/LICENSE"
 }

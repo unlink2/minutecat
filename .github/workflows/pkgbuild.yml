@@ -12,14 +12,21 @@ env:
 
 jobs:
   arch:
-
+    name: Arch Linux Packages
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v1
       # build an arch linux package for cli
-    - name: Arch Linux PKGBUILD builder action
+    - name: Arch Linux PKGBUILD
       uses: 2m/arch-pkgbuild-builder@v1.16
       with:
-        pkgname: 'pkg/arch/minutecat-git/'
         target: 'pkgbuild'
+        pkgname: 'pkg/arch/minutecat-git/'
+
+    - name: Arch Linux PKGBUILD validate binary
+      uses: 2m/arch-pkgbuild-builder@v1.16
+      with:
+        target: 'run'
+        pkgname: 'pkg/arch/minutecat-git'
+        command: 'minutecat --version'
