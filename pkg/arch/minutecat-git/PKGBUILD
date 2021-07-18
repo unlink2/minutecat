@@ -22,19 +22,19 @@ build() {
   cd $srcdir
   unzip "$pkgname-$pkgver.zip"
 
-  cd "$pkgname-$BRANCH/$frontend"
+  cd "$pkgname-$BRANCH/$FRONTEND"
 
   RUSTUP_TOOLCHAIN=stable cargo build --release
 }
 
 check() {
-  cd "$pkgname-$BRANCH/$frontend"
+  cd "$pkgname-$BRANCH/$FRONTEND"
 
   RUSTUP_TOOLCHAIN=stable cargo test --release
 }
 
 package() {
-  cd "$pkgname-$BRANCH/$frontend"
+  cd "$pkgname-$BRANCH/$FRONTEND"
   local OUT_DIR=$(<out_dir)
 
   install -Dm755 "target/release/$pkgname" "$pkgdir/usr/bin/$pkgname"
