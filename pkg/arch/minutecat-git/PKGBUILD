@@ -35,7 +35,8 @@ check() {
 
 package() {
   cd "$pkgname-$BRANCH/$FRONTEND"
-  local OUT_DIR=$(<out_dir)
+  pwd
+  ls
 
   install -Dm755 "target/release/$pkgname" "$pkgdir/usr/bin/$pkgname"
 
