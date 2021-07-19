@@ -25,7 +25,7 @@ fn main() -> BoxResult<()> {
             Window::new()
                 .title("minutecat desktop")
                 .size(420.0, 730.0)
-                .child(MainView::new().logset(interface.logset).build(ctx))
+                .child(MainView::new().build(ctx))
                 .build(ctx)
         })
     .run();
