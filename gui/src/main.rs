@@ -12,7 +12,7 @@ use minutecat::error::BoxResult;
 use orbtk::prelude::*;
 
 fn main() -> BoxResult<()> {
-    let interface = command_line()?;
+    let _interface = command_line()?;
 
     Application::new()
         .localization(

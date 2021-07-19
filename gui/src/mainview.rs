@@ -10,6 +10,17 @@ pub struct MainViewState {
 
 impl State for MainViewState {
     fn init(&mut self, _registry: &mut Registry, ctx: &mut Context) {
+        // TODO maybe do not panic here!
+        // TODO find better way to load logset than
+        // re-reading a file we already have!
+        ctx.widget()
+            .set("logset", minutecat::interface::init_logset()
+                .expect("Unable to read config!").0);
+    }
+
+    fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
+        let logset = ctx.widget()
+            .get_mut::<LogSet>("logset").len();
     }
 
     fn messages(
