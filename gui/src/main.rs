@@ -24,6 +24,7 @@ fn main() -> BoxResult<()> {
         .window(|ctx| {
             Window::new()
                 .title("minutecat desktop")
+                .resizeable(true)
                 .size(420.0, 730.0)
                 .child(MainView::new().build(ctx))
                 .build(ctx)

@@ -38,6 +38,7 @@ impl State for MainViewState {
     }
 
     fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
+        TextBox::text_mut(&mut ctx.child("test")).push('!');
     }
 
     fn messages(
@@ -57,7 +58,10 @@ impl Template for MainView {
     fn template(self, id: Entity, ctx: &mut BuildContext) -> Self {
         self.name("MainView")
             .child(
-                TextBox::new().text("MainView").build(ctx)
+                TextBox::new()
+                    .text("MainView")
+                    .id("test")
+                    .build(ctx)
             )
     }
 }
