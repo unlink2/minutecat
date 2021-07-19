@@ -8,14 +8,27 @@ use std::cell::RefCell;
 pub struct MainViewState {
 }
 
-impl State for MainViewState {
-    fn init(&mut self, _registry: &mut Registry, ctx: &mut Context) {
+impl MainViewState {
+    fn load(&mut self, ctx: &mut Context) {
         // TODO maybe do not panic here!
         // TODO find better way to load logset than
         // re-reading a file we already have!
+        let (logset, path) = minutecat::interface::init_logset()
+                .expect("Unable to read config!");
+
+        ctx.widget().set("path", path);
         ctx.widget()
-            .set("logset", minutecat::interface::init_logset()
-                .expect("Unable to read config!").0);
+            .set("logset", logset);
+    }
+
+    fn save(&mut self, ctx: &mut Context) {
+        // TODO maybe do not panic here!
+    }
+}
+
+impl State for MainViewState {
+    fn init(&mut self, _registry: &mut Registry, ctx: &mut Context) {
+        self.load(ctx);
     }
 
     fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
@@ -32,8 +45,6 @@ impl State for MainViewState {
 }
 
 widget!(MainView<MainViewState> {
-    text: String,
-    logset: LogSet
 });
 
 impl Template for MainView {
