@@ -1,12 +1,19 @@
 extern crate orbtk;
+extern crate minutecat;
 
 mod local;
 mod listview;
+mod logs;
+mod mainview;
 
-use listview::LogListView;
+use mainview::MainView;
+use minutecat::interface::command_line;
+use minutecat::error::BoxResult;
 use orbtk::prelude::*;
 
-fn main() {
+fn main() -> BoxResult<()> {
+    let interface = command_line()?;
+
     Application::new()
         .localization(
             RonLocalization::create()
@@ -18,8 +25,10 @@ fn main() {
             Window::new()
                 .title("minutecat desktop")
                 .size(420.0, 730.0)
-                .child(LogListView::new().build(ctx))
+                .child(MainView::new().build(ctx))
                 .build(ctx)
         })
     .run();
+
+    Ok(())
 }

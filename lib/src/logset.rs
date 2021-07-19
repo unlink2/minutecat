@@ -8,7 +8,7 @@ use std::io::Read;
 use std::str;
 use std::path::Path;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct LogSet {
     pub logs: Vec<Logfile>
 }

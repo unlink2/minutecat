@@ -3,6 +3,7 @@ use super::trigger::Trigger;
 use super::task::Task;
 use super::serde::{Serialize, Deserialize};
 use super::error::BoxResult;
+use std::fmt;
 
 /// An event handler callback
 /// that is notified whenever a text trigger is true
@@ -10,13 +11,26 @@ pub trait EventHandler {
     fn on_event(&mut self, trigger: &dyn Trigger, text: &str);
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Logfile {
     pub name: String,
     pub text: String,
     source: Box<dyn DataSource>,
     pub triggers: Vec<Box<dyn Trigger>>,
     pub task: Task,
+}
+
+impl PartialEq for Logfile {
+    // TODO maybe implement eq for triggers, source and task
+    fn eq(&self, other: &Logfile) -> bool {
+        self.name == other.name && self.text == other.text
+    }
+}
+
+impl fmt::Debug for Logfile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 impl Logfile {

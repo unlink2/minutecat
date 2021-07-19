@@ -3,6 +3,17 @@ use super::typetag;
 use super::error::BoxResult;
 use super::regex::Regex;
 
+pub trait TriggerClone {
+    fn box_clone(&self) -> Box<dyn Trigger>;
+}
+
+impl<T> TriggerClone for T
+where T: 'static + Trigger + Clone {
+    fn box_clone(&self) -> Box<dyn Trigger> {
+        Box::new(self.clone())
+    }
+}
+
 /// TriggerType describes if a trigger
 /// should be interpreted as an error,
 /// a warning or success
@@ -18,14 +29,20 @@ pub enum TriggerType {
 /// cause a logfile notification to appear
 /// e.g. regex match, time since last change
 #[typetag::serde(tag = "type")]
-pub trait Trigger {
+pub trait Trigger: TriggerClone {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
     fn check(&self, text: &str) -> BoxResult<bool>;
     fn get_type(&self) -> TriggerType;
 }
 
-#[derive(Serialize, Deserialize)]
+impl Clone for Box<dyn Trigger> {
+    fn clone(&self) -> Box<dyn Trigger> {
+        self.box_clone()
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct RegexTrigger {
     name: String,
     description: String,

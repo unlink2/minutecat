@@ -10,17 +10,34 @@ use std::collections::HashMap;
 /// For this simple usecase this is more than enough
 pub type TimeMs = u128;
 
+pub trait TimeSourceClone {
+    fn box_clone(&self) -> Box<dyn TimeSource>;
+}
+
+impl<T> TimeSourceClone for T
+where T: 'static + TimeSource + Clone {
+    fn box_clone(&self) -> Box<dyn TimeSource> {
+        Box::new(self.clone())
+    }
+}
+
 /// Time source expects time to be returned in
 /// ms
 #[typetag::serde(tag = "type")]
-pub trait TimeSource {
+pub trait TimeSource: TimeSourceClone {
     fn get_time_ms(&mut self) -> TimeMs;
+}
+
+impl Clone for Box<dyn TimeSource> {
+    fn clone(&self) -> Box<dyn TimeSource> {
+        self.box_clone()
+    }
 }
 
 /// dummy time source with pre-defined return values
 /// for every time a time is requested
 /// once again useful for demos or unit tests
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct InMemoryTimeSource {
     times: Vec<TimeMs>
 }
@@ -31,6 +48,7 @@ impl InMemoryTimeSource {
     }
 }
 
+
 #[typetag::serde]
 impl TimeSource for InMemoryTimeSource {
     fn get_time_ms(&mut self) -> TimeMs {
@@ -40,7 +58,7 @@ impl TimeSource for InMemoryTimeSource {
 
 /// actual time-based source
 /// this is usually the source you want
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ClockTimeSource;
 
 #[typetag::serde]
@@ -55,7 +73,7 @@ impl TimeSource for ClockTimeSource {
 
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Task {
     repeat: bool,
     done: bool,
