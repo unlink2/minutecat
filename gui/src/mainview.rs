@@ -16,13 +16,19 @@ impl MainViewState {
         let (logset, path) = minutecat::interface::init_logset()
                 .expect("Unable to read config!");
 
-        ctx.widget().set("path", path);
+        ctx.widget()
+            .set("path", path);
         ctx.widget()
             .set("logset", logset);
     }
 
     fn save(&mut self, ctx: &mut Context) {
+        let path = ctx.widget().get_mut::<String>("path").clone();
         // TODO maybe do not panic here!
+        ctx.widget()
+            .get_mut::<LogSet>("logset")
+            .to_file(&path)
+            .expect("Unable to save config!");
     }
 }
 
@@ -32,8 +38,6 @@ impl State for MainViewState {
     }
 
     fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
-        let logset = ctx.widget()
-            .get_mut::<LogSet>("logset").len();
     }
 
     fn messages(
@@ -45,11 +49,16 @@ impl State for MainViewState {
 }
 
 widget!(MainView<MainViewState> {
+    path: String,
+    logset: LogSet
 });
 
 impl Template for MainView {
     fn template(self, id: Entity, ctx: &mut BuildContext) -> Self {
         self.name("MainView")
+            .child(
+                TextBox::new().text("MainView").build(ctx)
+            )
     }
 }
 
