@@ -4,6 +4,7 @@ use super::minutecat::logset::LogSet;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+
 #[derive(Default, AsAny)]
 pub struct MainViewState {
 }
@@ -38,7 +39,6 @@ impl State for MainViewState {
     }
 
     fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
-        TextBox::text_mut(&mut ctx.child("test")).push('!');
     }
 
     fn messages(
@@ -58,10 +58,25 @@ impl Template for MainView {
     fn template(self, id: Entity, ctx: &mut BuildContext) -> Self {
         self.name("MainView")
             .child(
-                TextBox::new()
-                    .text("MainView")
-                    .id("test")
+                Grid::new()
+                .child(
+                    Container::new()
+                    .style("toolbar")
+                    .attach(Grid::column_span(3))
+                    .child(
+                        Stack::new()
+                        .orientation("horizontal")
+                        .child(
+                            Button::new().text("Test").build(ctx)
+                        )
+                        .child(
+                            Button::new().text("Test").build(ctx)
+                        )
+                        .build(ctx)
+                    )
                     .build(ctx)
+                )
+                .build(ctx)
             )
     }
 }
