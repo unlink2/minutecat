@@ -1,6 +1,7 @@
 use super::minutecat::trigger::TriggerType;
 use super::minutecat::logfile::EventHandler;
 use super::minutecat::trigger::Trigger;
+use super::minutecat::extra::ExtraData;
 
 #[derive(Clone)]
 pub struct TabState {
@@ -64,7 +65,7 @@ impl TabManager {
 }
 
 impl EventHandler for TabState {
-    fn on_event(&mut self, trigger: &dyn Trigger, _text: &str) {
+    fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
         self.trigger_type = trigger.get_type();
     }
 }

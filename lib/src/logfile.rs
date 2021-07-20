@@ -4,11 +4,12 @@ use super::task::Task;
 use super::serde::{Serialize, Deserialize};
 use super::error::BoxResult;
 use std::fmt;
+use super::extra::ExtraData;
 
 /// An event handler callback
 /// that is notified whenever a text trigger is true
 pub trait EventHandler {
-    fn on_event(&mut self, trigger: &dyn Trigger, text: &str);
+    fn on_event(&mut self, trigger: &dyn Trigger, extra: &mut ExtraData, text: &str);
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -18,6 +19,9 @@ pub struct Logfile {
     source: Box<dyn DataSource>,
     pub triggers: Vec<Box<dyn Trigger>>,
     pub task: Task,
+    /// extra data may be used by EventHandlers to store data
+    #[serde(default)]
+    pub extra: ExtraData
 }
 
 impl PartialEq for Logfile {
@@ -40,7 +44,8 @@ impl Logfile {
             text: "".into(),
             source,
             triggers: vec![],
-            task
+            task,
+            extra: ExtraData::new()
         }
     }
 
@@ -85,20 +90,16 @@ impl Logfile {
         return Ok(true);
     }
 
-    pub fn check(&self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<()> {
+    pub fn check(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<()> {
         // and check triggers
         for trigger in &self.triggers[..] {
             if trigger.check(&self.text)? {
-                self.notify(trigger.as_ref(), handlers);
+                for handler in &mut handlers[..] {
+                    handler.on_event(trigger.as_ref(), &mut self.extra, &self.text);
+                }
             }
         }
         return Ok(());
-    }
-
-    fn notify(&self, trigger: &dyn Trigger, handlers: &mut Vec<&mut dyn EventHandler>) {
-        for handler in &mut handlers[..] {
-            handler.on_event(trigger, &self.text);
-        }
     }
 }
 
@@ -113,7 +114,7 @@ mod tests {
 
     struct TestHandler(Option<TriggerType>);
     impl EventHandler for TestHandler {
-        fn on_event(&mut self, trigger: &dyn Trigger, _text: &str) {
+        fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
             self.0 = Some(trigger.get_type());
         }
     }
