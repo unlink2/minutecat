@@ -31,11 +31,16 @@ impl MainViewState {
             .to_file(&path)
             .expect("Unable to save config!");
     }
+
+    fn init_list(&mut self, ctx: &mut Context) {
+        ctx.child("logfile_list");
+    }
 }
 
 impl State for MainViewState {
     fn init(&mut self, _registry: &mut Registry, ctx: &mut Context) {
         self.load(ctx);
+        self.init_list(ctx);
     }
 
     fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
@@ -66,12 +71,7 @@ impl Template for MainView {
                     .child(
                         Stack::new()
                         .orientation("horizontal")
-                        .child(
-                            Button::new().text("Test").build(ctx)
-                        )
-                        .child(
-                            Button::new().text("Test").build(ctx)
-                        )
+                        .id("logfile_list")
                         .build(ctx)
                     )
                     .build(ctx)
