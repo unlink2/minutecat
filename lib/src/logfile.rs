@@ -131,9 +131,9 @@ mod tests {
         );
 
         lf.push(Box::new(RegexTrigger::new("success", "on success",
-                    TriggerType::Success, "success")));
+                    TriggerType::Success, "success", false)));
         lf.push(Box::new(RegexTrigger::new("failure", "on error",
-                    TriggerType::Error, "error")));
+                    TriggerType::Error, "error", false)));
 
         let mut handler = TestHandler(None);
         // test handlers
@@ -156,9 +156,9 @@ mod tests {
         );
 
         lf.push(Box::new(RegexTrigger::new("success", "on success",
-                    TriggerType::Success, "success")));
+                    TriggerType::Success, "success", false)));
         lf.push(Box::new(RegexTrigger::new("failure", "on error",
-                    TriggerType::Error, "error")));
+                    TriggerType::Error, "error", false)));
 
         let mut handler = TestHandler(None);
         // test handlers

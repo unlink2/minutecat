@@ -47,16 +47,20 @@ pub struct RegexTrigger {
     name: String,
     description: String,
     trigger_type: TriggerType,
-    re: String
+    re: String,
+
+    #[serde(default)]
+    invert: bool
 }
 
 impl RegexTrigger {
-    pub fn new(name: &str, description: &str, trigger_type: TriggerType, re: &str) -> Self {
+    pub fn new(name: &str, description: &str, trigger_type: TriggerType, re: &str, invert: bool) -> Self {
         Self {
             name: name.into(),
             description: description.into(),
             trigger_type,
-            re: re.into()
+            re: re.into(),
+            invert
         }
     }
 }
@@ -73,7 +77,7 @@ impl Trigger for RegexTrigger {
 
     fn check(&self, text: &str) -> BoxResult<bool> {
         let re = Regex::new(&self.re)?;
-        Ok(re.is_match(text))
+        Ok(re.is_match(text) ^ self.invert)
     }
 
     fn get_type(&self) -> TriggerType {
@@ -87,14 +91,28 @@ mod tests {
 
     #[test]
     fn it_should_match_trigger() {
-        let r = RegexTrigger::new("name", "desc", TriggerType::Success, "test");
+        let r = RegexTrigger::new("name", "desc", TriggerType::Success, "test", false);
 
         assert!(r.check("This is a test string").unwrap());
     }
 
     #[test]
     fn it_should_not_match() {
-        let r = RegexTrigger::new("name", "desc", TriggerType::Success, "foo");
+        let r = RegexTrigger::new("name", "desc", TriggerType::Success, "foo", false);
+
+        assert!(!r.check("This is a test string").unwrap());
+    }
+
+    #[test]
+    fn it_should_match_inverted_trigger() {
+        let r = RegexTrigger::new("name", "desc", TriggerType::Success, "foo", true);
+
+        assert!(r.check("This is a test string").unwrap());
+    }
+
+    #[test]
+    fn it_should_not_match_inverted() {
+        let r = RegexTrigger::new("name", "desc", TriggerType::Success, "test", true);
 
         assert!(!r.check("This is a test string").unwrap());
     }

@@ -80,7 +80,9 @@ pub struct AddReTrigger {
     pub name: String,
     pub desc: String,
     pub trigger_type: String,
-    pub regex: String
+    pub regex: String,
+    #[clap(long)]
+    pub invert: bool
 }
 
 #[derive(Clap)]
@@ -194,7 +196,7 @@ pub fn add_re_trigger(re: &AddReTrigger, logset: &mut LogSet) -> BoxResult<bool>
         };
 
 
-        log.push(Box::new(RegexTrigger::new(&re.name, &re.desc, trigger_type, &re.regex)));
+        log.push(Box::new(RegexTrigger::new(&re.name, &re.desc, trigger_type, &re.regex, re.invert)));
 
     }
     Ok(true)
