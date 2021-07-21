@@ -33,7 +33,12 @@ impl MainViewState {
     }
 
     fn init_list(&mut self, ctx: &mut Context) {
-        ctx.child("logfile_list");
+        let stack = ctx.entity_of_child("logfile_list").unwrap();
+
+        let build_ctx = &mut ctx.build_context();
+        let new_child = TextBlock::new().text("Hello world!\nMulti line").build(build_ctx);
+        build_ctx.append_child(stack, new_child);
+
     }
 }
 
