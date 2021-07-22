@@ -2,18 +2,19 @@ use super::minutecat::trigger::TriggerType;
 use super::minutecat::logfile::EventHandler;
 use super::minutecat::trigger::Trigger;
 use super::minutecat::extra::ExtraData;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct TabState {
     pub trigger_type: TriggerType,
-    pub slices: Vec<String>
+    pub slices: HashMap<String, String>
 }
 
 impl TabState {
     pub fn new() -> Self {
         Self {
             trigger_type: TriggerType::NoEvent,
-            slices: vec![]
+            slices: HashMap::new()
         }
     }
 }
@@ -86,7 +87,13 @@ impl TabManager {
 
 impl EventHandler for TabState {
     fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, text: &str) {
-        self.slices.push(trigger.slice(text).unwrap_or("").into());
+        self.slices.insert(trigger.name().into(), trigger.slice(text).unwrap_or("").into());
         self.trigger_type = trigger.get_type();
+    }
+
+    fn on_none(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
+        if self.slices.contains_key(trigger.name()) {
+            self.slices.remove(trigger.name());
+        }
     }
 }

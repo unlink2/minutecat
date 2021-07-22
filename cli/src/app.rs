@@ -54,7 +54,6 @@ where B: Backend {
         // update logs
 
         for (i, log) in interface.logset.logs.iter_mut().enumerate() {
-            tabs.state[i].slices.clear();
             log.update(&mut vec![&mut tabs.state[i]])?;
         }
 
@@ -137,6 +136,39 @@ where B: Backend {
         f.render_widget(content, *chunk);
     }
 
+    pub fn render_info(f: &mut Frame<B>, _interface: &Interface, tab_manager: &TabManager, chunk: &Rect) {
+        // get slices
+        let tab = &tab_manager.state[tab_manager.index];
+
+        let titles: Vec<Spans> = tab.slices
+            .iter()
+            .enumerate()
+            .map(|(_i, t)| {
+                let color = match tab.trigger_type {
+                    TriggerType::Success => Color::Green,
+                    TriggerType::Warning => Color::Yellow,
+                    TriggerType::Error => Color::Red,
+                    _ => Color::White
+                };
+                Spans::from(vec![
+                    Span::styled(format!("{}={}", t.0, t.1), Style::default().fg(color)),
+                ])
+            })
+        .collect();
+
+        // render tabs
+        let tabs = Tabs::new(titles)
+            .block(Block::default().borders(Borders::ALL).title(format!("Info ({})", tab.slices.len())))
+            .select(tab_manager.index)
+            .style(Style::default().fg(Color::Cyan))
+            .highlight_style(
+                Style::default()
+                .add_modifier(Modifier::BOLD)
+                .bg(Color::Black),
+            );
+        f.render_widget(tabs, *chunk);
+    }
+
     pub fn render(&mut self) -> BoxResult<()> {
         let interface = &self.interface;
         let tab_manager = &self.tabs;
@@ -147,7 +179,7 @@ where B: Backend {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(1)
-                .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+                .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)].as_ref())
                 .split(size);
 
             // outside border
@@ -162,6 +194,7 @@ where B: Backend {
             } else {
                 Self::render_content(&mut f, interface, tab_manager, &chunks[1]);
                 // render info about matches
+                Self::render_info(&mut f, interface, tab_manager, &chunks[2]);
             }
         })?;
 
