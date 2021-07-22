@@ -5,13 +5,15 @@ use super::minutecat::extra::ExtraData;
 
 #[derive(Clone)]
 pub struct TabState {
-    pub trigger_type: TriggerType
+    pub trigger_type: TriggerType,
+    pub slices: Vec<String>
 }
 
 impl TabState {
     pub fn new() -> Self {
         Self {
-            trigger_type: TriggerType::NoEvent
+            trigger_type: TriggerType::NoEvent,
+            slices: vec![]
         }
     }
 }
@@ -83,7 +85,8 @@ impl TabManager {
 }
 
 impl EventHandler for TabState {
-    fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
+    fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, text: &str) {
+        self.slices.push(trigger.slice(text).unwrap_or("").into());
         self.trigger_type = trigger.get_type();
     }
 }

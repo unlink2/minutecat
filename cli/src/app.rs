@@ -6,11 +6,12 @@ use super::minutecat::trigger::TriggerType;
 use termion::event::Key;
 use tui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout, Alignment},
+    layout::{Constraint, Direction, Layout, Alignment, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
     widgets::{Block, Borders, Paragraph, Tabs, Wrap},
     Terminal,
+    Frame
 };
 use chrono::prelude::DateTime;
 use chrono::Local;
@@ -53,6 +54,7 @@ where B: Backend {
         // update logs
 
         for (i, log) in interface.logset.logs.iter_mut().enumerate() {
+            tabs.state[i].slices.clear();
             log.update(&mut vec![&mut tabs.state[i]])?;
         }
 
@@ -74,16 +76,78 @@ where B: Backend {
         return Ok(false);
     }
 
+    pub fn render_tabs(f: &mut Frame<B>, interface: &Interface, tab_manager: &TabManager, chunk: &Rect) {
+        // get tab titles
+        let titles: Vec<Spans> = interface
+            .logset.logs[tab_manager.tab_offset..]
+            .iter()
+            .enumerate()
+            .map(|(i, t)| {
+                let tab = &tab_manager.state[tab_manager.tab_offset+i];
+
+                let color = match tab.trigger_type {
+                    TriggerType::Success => Color::Green,
+                    TriggerType::Warning => Color::Yellow,
+                    TriggerType::Error => Color::Red,
+                    _ => Color::White
+                };
+                Spans::from(vec![
+                    Span::styled(&t.name, Style::default().fg(color)),
+                ])
+            })
+        .collect();
+
+        // render tabs
+        let tabs = Tabs::new(titles)
+            .block(Block::default().borders(Borders::ALL).title(
+                    format!("Tabs {}/{}", tab_manager.index+1, tab_manager.max)))
+            .select(tab_manager.index)
+            .style(Style::default().fg(Color::Cyan))
+            .highlight_style(
+                Style::default()
+                .add_modifier(Modifier::BOLD)
+                .bg(Color::Black),
+            );
+        f.render_widget(tabs, *chunk);
+    }
+
+    pub fn render_no_logs(f: &mut Frame<B>, _interface: &Interface, tab_manager: &TabManager, chunk: &Rect) {
+        let content = Paragraph::new("No Logs")
+            .block(Block::default().borders(Borders::ALL).title(
+                    "No Logs"))
+            .wrap(Wrap { trim: true })
+            .alignment(Alignment::Left)
+            .scroll(tab_manager.scroll);
+        f.render_widget(content, *chunk);
+    }
+
+    pub fn render_content(f: &mut Frame<B>, interface: &Interface, tab_manager: &TabManager, chunk: &Rect) {
+        let log = &interface.logset.logs[tab_manager.index];
+
+        let d = UNIX_EPOCH + Duration::from_millis(log.task.next_time() as u64);
+        let datetime = DateTime::<Local>::from(d);
+
+        // render content
+        let content = Paragraph::new(log.text.clone())
+            .block(Block::default().borders(Borders::ALL).title(
+                    format!("{} Next: {}", log.name.clone(), datetime.format("%Y-%m-%d %H:%M:%S"))))
+            .wrap(Wrap { trim: true })
+            .alignment(Alignment::Left)
+            .scroll(tab_manager.scroll);
+        f.render_widget(content, *chunk);
+    }
+
     pub fn render(&mut self) -> BoxResult<()> {
         let interface = &self.interface;
         let tab_manager = &self.tabs;
 
-        self.terminal.draw(|f| {
+        self.terminal.draw(|mut f| {
             let size = f.size();
+
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(1)
-                .constraints([Constraint::Length(3),Constraint::Min(0)].as_ref())
+                .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
                 .split(size);
 
             // outside border
@@ -91,61 +155,13 @@ where B: Backend {
                 .borders(Borders::ALL);
             f.render_widget(block, size);
 
-            // get tab titles
-            let titles: Vec<Spans> = interface
-                .logset.logs[tab_manager.tab_offset..]
-                .iter()
-                .enumerate()
-                .map(|(i, t)| {
-                    let tab = &tab_manager.state[tab_manager.tab_offset+i];
-
-                    let color = match tab.trigger_type {
-                        TriggerType::Success => Color::Green,
-                        TriggerType::Warning => Color::Yellow,
-                        TriggerType::Error => Color::Red,
-                        _ => Color::White
-                    };
-                    Spans::from(vec![
-                        Span::styled(&t.name, Style::default().fg(color)),
-                    ])
-                })
-                .collect();
-
-            // render tabs
-            let tabs = Tabs::new(titles)
-                .block(Block::default().borders(Borders::ALL).title(
-                        format!("Tabs {}/{}", tab_manager.index+1, tab_manager.max)))
-                .select(tab_manager.index)
-                .style(Style::default().fg(Color::Cyan))
-                .highlight_style(
-                    Style::default()
-                        .add_modifier(Modifier::BOLD)
-                        .bg(Color::Black),
-                );
-            f.render_widget(tabs, chunks[0]);
+            Self::render_tabs(&mut f, interface, tab_manager, &chunks[0]);
 
             if interface.logset.len() == 0 {
-                let content = Paragraph::new("No Logs")
-                    .block(Block::default().borders(Borders::ALL).title(
-                            "No Logs"))
-                    .wrap(Wrap { trim: true })
-                    .alignment(Alignment::Left)
-                    .scroll(tab_manager.scroll);
-                f.render_widget(content, chunks[1]);
+                Self::render_no_logs(&mut f, interface, tab_manager, &chunks[1]);
             } else {
-                let log = &interface.logset.logs[tab_manager.index];
-
-                let d = UNIX_EPOCH + Duration::from_millis(log.task.next_time() as u64);
-                let datetime = DateTime::<Local>::from(d);
-
-                // render content
-                let content = Paragraph::new(log.text.clone())
-                    .block(Block::default().borders(Borders::ALL).title(
-                            format!("{} Next: {}", log.name.clone(), datetime.format("%Y-%m-%d %H:%M:%S"))))
-                    .wrap(Wrap { trim: true })
-                    .alignment(Alignment::Left)
-                    .scroll(tab_manager.scroll);
-                f.render_widget(content, chunks[1]);
+                Self::render_content(&mut f, interface, tab_manager, &chunks[1]);
+                // render info about matches
             }
         })?;
 
