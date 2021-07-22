@@ -5,14 +5,14 @@ pub struct LogListViewState {
 }
 
 impl State for LogListViewState {
-    fn init(&mut self, _registry: &mut Registry, ctx: &mut Context) {
+    fn init(&mut self, _registry: &mut Registry, _ctx: &mut Context) {
     }
 
     fn messages(
         &mut self,
-        messages: MessageReader,
+        _messages: MessageReader,
         _registry: &mut Registry,
-        ctx: &mut Context) {
+        _ctx: &mut Context) {
     }
 }
 
@@ -21,7 +21,7 @@ widget!(LogListView<LogListViewState> {
 });
 
 impl Template for LogListView {
-    fn template(self, id: Entity, ctx: &mut BuildContext) -> Self {
+    fn template(self, _id: Entity, _ctx: &mut BuildContext) -> Self {
         self.name("LogListView")
     }
 }

@@ -1,10 +1,10 @@
 extern crate orbtk;
 extern crate minutecat;
 
-mod local;
-mod listview;
-mod logs;
-mod mainview;
+pub mod local;
+pub mod listview;
+pub mod logs;
+pub mod mainview;
 
 use mainview::MainView;
 use minutecat::interface::command_line;

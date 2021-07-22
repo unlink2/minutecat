@@ -1,5 +1,4 @@
 use super::orbtk::prelude::*;
-use super::minutecat::interface::command_line;
 use super::minutecat::logset::LogSet;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -23,7 +22,7 @@ impl MainViewState {
             .set("logset", logset);
     }
 
-    fn save(&mut self, ctx: &mut Context) {
+    pub fn save(&mut self, ctx: &mut Context) {
         let path = ctx.widget().get_mut::<String>("path").clone();
         // TODO maybe do not panic here!
         ctx.widget()
@@ -48,14 +47,14 @@ impl State for MainViewState {
         self.init_list(ctx);
     }
 
-    fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
+    fn update(&mut self, _registry: &mut Registry, _ctx: &mut Context) {
     }
 
     fn messages(
         &mut self,
-        messages: MessageReader,
+        _messages: MessageReader,
         _registry: &mut Registry,
-        ctx: &mut Context) {
+        _ctx: &mut Context) {
     }
 }
 
@@ -65,7 +64,7 @@ widget!(MainView<MainViewState> {
 });
 
 impl Template for MainView {
-    fn template(self, id: Entity, ctx: &mut BuildContext) -> Self {
+    fn template(self, _id: Entity, ctx: &mut BuildContext) -> Self {
         self.name("MainView")
             .child(
                 Grid::new()
