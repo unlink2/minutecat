@@ -65,6 +65,8 @@ where B: Backend {
                 Key::Left => self.tabs.prev(),
                 Key::Up => self.tabs.down(),
                 Key::Down => self.tabs.up(),
+                Key::PageUp => self.tabs.next_offset(),
+                Key::PageDown => self.tabs.prev_offset(),
                 _ => {}
             }
         }
@@ -91,11 +93,11 @@ where B: Backend {
 
             // get tab titles
             let titles: Vec<Spans> = interface
-                .logset.logs
+                .logset.logs[tab_manager.tab_offset..]
                 .iter()
                 .enumerate()
                 .map(|(i, t)| {
-                    let tab = &tab_manager.state[i];
+                    let tab = &tab_manager.state[tab_manager.tab_offset+i];
 
                     let color = match tab.trigger_type {
                         TriggerType::Success => Color::Green,
@@ -111,7 +113,8 @@ where B: Backend {
 
             // render tabs
             let tabs = Tabs::new(titles)
-                .block(Block::default().borders(Borders::ALL).title("Tabs"))
+                .block(Block::default().borders(Borders::ALL).title(
+                        format!("Tabs {}/{}", tab_manager.index+1, tab_manager.max)))
                 .select(tab_manager.index)
                 .style(Style::default().fg(Color::Cyan))
                 .highlight_style(

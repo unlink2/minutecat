@@ -33,6 +33,9 @@ pub trait Trigger: TriggerClone {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
     fn check(&self, text: &str) -> BoxResult<bool>;
+
+    /// returns the slice that fired the trigger
+    fn slice<'a>(&self, text: &'a str) -> BoxResult<&'a str>;
     fn get_type(&self) -> TriggerType;
 }
 
@@ -80,6 +83,14 @@ impl Trigger for RegexTrigger {
         Ok(re.is_match(text) ^ self.invert)
     }
 
+    fn slice<'a>(&self, text: &'a str) -> BoxResult<&'a str> {
+        let re = Regex::new(&self.re)?;
+        match re.find(text) {
+            Some(ma) => Ok(&text[ma.start()..ma.end()]),
+            _ => Ok(&text[0..0])
+        }
+    }
+
     fn get_type(&self) -> TriggerType {
         self.trigger_type
     }
@@ -94,6 +105,7 @@ mod tests {
         let r = RegexTrigger::new("name", "desc", TriggerType::Success, "test", false);
 
         assert!(r.check("This is a test string").unwrap());
+        assert_eq!(r.slice("This is a test string").unwrap(), "test");
     }
 
     #[test]
@@ -101,6 +113,7 @@ mod tests {
         let r = RegexTrigger::new("name", "desc", TriggerType::Success, "foo", false);
 
         assert!(!r.check("This is a test string").unwrap());
+        assert_eq!(r.slice("This is a test string").unwrap(), "");
     }
 
     #[test]
@@ -108,6 +121,7 @@ mod tests {
         let r = RegexTrigger::new("name", "desc", TriggerType::Success, "foo", true);
 
         assert!(r.check("This is a test string").unwrap());
+        assert_eq!(r.slice("This is a test string").unwrap(), "");
     }
 
     #[test]
@@ -115,5 +129,6 @@ mod tests {
         let r = RegexTrigger::new("name", "desc", TriggerType::Success, "test", true);
 
         assert!(!r.check("This is a test string").unwrap());
+        assert_eq!(r.slice("This is a test string").unwrap(), "test");
     }
 }

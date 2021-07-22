@@ -20,7 +20,8 @@ pub struct TabManager {
     pub state: Vec<TabState>,
     pub max: usize,
     pub index: usize,
-    pub scroll: (u16, u16)
+    pub scroll: (u16, u16),
+    pub tab_offset: usize
 }
 
 impl TabManager {
@@ -29,7 +30,8 @@ impl TabManager {
             state: vec![TabState::new(); max],
             index: 0,
             max,
-            scroll: (0, 0)
+            scroll: (0, 0),
+            tab_offset: 0
         }
     }
 
@@ -60,6 +62,22 @@ impl TabManager {
             self.index = self.max-1;
         } else {
             self.index -= 1;
+        }
+    }
+
+    pub fn next_offset(&mut self) {
+        if self.tab_offset >= self.max-1 {
+            self.tab_offset = 0;
+        } else {
+            self.tab_offset += 1;
+        }
+    }
+
+    pub fn prev_offset(&mut self) {
+        if self.tab_offset <= 0 {
+            self.tab_offset = self.max-1;
+        } else {
+            self.tab_offset -= 1;
         }
     }
 }
