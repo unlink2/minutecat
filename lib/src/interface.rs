@@ -1,15 +1,12 @@
 use super::logset::LogSet;
-use super::logfile::Logfile;
-use super::task::Task;
-use super::task::ClockTimeSource;
-use super::source::FileDataSource;
-use super::trigger::{RegexTrigger, TriggerType};
+use super::trigger::TriggerType;
 use std::path::PathBuf;
 use std::str::FromStr;
 use super::dirs;
 use super::error::BoxResult;
 use super::clap::{AppSettings, Clap};
 use std::env;
+use super::command::*;
 
 /**
  * This file descibes a general purpse command line interface
@@ -155,11 +152,12 @@ pub fn command_line() -> BoxResult<Interface> {
 pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<bool> {
     match add.logtype.as_str() {
         "local" => {
-            logset.logs.push(
-                Logfile::new(&add.name,
-                    Box::new(FileDataSource::new(&add.location, add.line_limit)),
-                    Task::from_str(true, &add.refresh_time, Box::new(ClockTimeSource))?
-            ))
+            let mut cmd = AddLocalFileCommand::new(
+                &add.name,
+                &add.location,
+                add.line_limit,
+                &add.refresh_time);
+            cmd.execute(logset)?;
         }
         _ => println!("Invalid logfile type!")
     }
@@ -175,7 +173,8 @@ pub fn list_cmd(_list: &List, logset: &mut LogSet) -> BoxResult<bool> {
 }
 
 pub fn delete_cmd(delete: &Delete, logset: &mut LogSet) -> BoxResult<bool> {
-    logset.remove(delete.index);
+    let mut cmd = DeleteLogfileCommand::new(delete.index);
+    cmd.execute(logset)?;
     Ok(true)
 }
 
@@ -195,9 +194,8 @@ pub fn add_re_trigger(re: &AddReTrigger, logset: &mut LogSet) -> BoxResult<bool>
             }
         };
 
-
-        log.push(Box::new(RegexTrigger::new(&re.name, &re.desc, trigger_type, &re.regex, re.invert)));
-
+        let mut cmd = AddRegexTriggerCommand::new(&re.name, &re.desc, trigger_type, &re.regex, re.invert);
+        cmd.execute(log)?;
     }
     Ok(true)
 }
@@ -220,7 +218,9 @@ pub fn delete_trigger(dt: &DeleteTrigger, logset: &mut LogSet) -> BoxResult<bool
         println!("Index out of bounds!");
     } else {
         let log = &mut logset.logs[dt.log_index];
-        log.remove(dt.trigger_index);
+
+        let mut cmd = RemoveTriggerCommand::new(dt.log_index);
+        cmd.execute(log)?;
     }
     Ok(true)
 }
