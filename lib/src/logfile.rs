@@ -3,20 +3,42 @@ use super::trigger::Trigger;
 use super::task::Task;
 use super::serde::{Serialize, Deserialize};
 use super::error::BoxResult;
+use std::fmt;
+use super::extra::ExtraData;
 
 /// An event handler callback
 /// that is notified whenever a text trigger is true
 pub trait EventHandler {
-    fn on_event(&mut self, trigger: &dyn Trigger, text: &str);
+    /// called when the trigger fires
+    fn on_event(&mut self, trigger: &dyn Trigger, extra: &mut ExtraData, text: &str);
+
+    /// called when the trigger did not fire
+    fn on_none(&mut self, trigger: &dyn Trigger, extra: &mut ExtraData, text: &str);
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Logfile {
     pub name: String,
     pub text: String,
     source: Box<dyn DataSource>,
     pub triggers: Vec<Box<dyn Trigger>>,
     pub task: Task,
+    /// extra data may be used by EventHandlers to store data
+    #[serde(default)]
+    pub extra: ExtraData
+}
+
+impl PartialEq for Logfile {
+    // TODO maybe implement eq for triggers, source and task
+    fn eq(&self, other: &Logfile) -> bool {
+        self.name == other.name && self.text == other.text
+    }
+}
+
+impl fmt::Debug for Logfile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 impl Logfile {
@@ -26,7 +48,8 @@ impl Logfile {
             text: "".into(),
             source,
             triggers: vec![],
-            task
+            task,
+            extra: ExtraData::new()
         }
     }
 
@@ -71,20 +94,20 @@ impl Logfile {
         return Ok(true);
     }
 
-    pub fn check(&self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<()> {
+    pub fn check(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<()> {
         // and check triggers
         for trigger in &self.triggers[..] {
             if trigger.check(&self.text)? {
-                self.notify(trigger.as_ref(), handlers);
+                for handler in &mut handlers[..] {
+                    handler.on_event(trigger.as_ref(), &mut self.extra, &self.text);
+                }
+            } else {
+                for handler in &mut handlers[..] {
+                    handler.on_none(trigger.as_ref(), &mut self.extra, &self.text);
+                }
             }
         }
         return Ok(());
-    }
-
-    fn notify(&self, trigger: &dyn Trigger, handlers: &mut Vec<&mut dyn EventHandler>) {
-        for handler in &mut handlers[..] {
-            handler.on_event(trigger, &self.text);
-        }
     }
 }
 
@@ -97,10 +120,14 @@ mod tests {
     use crate::task::InMemoryTimeSource;
     use crate::trigger::{RegexTrigger, TriggerType};
 
-    struct TestHandler(Option<TriggerType>);
+    struct TestHandler(Option<TriggerType>, Option<TriggerType>);
     impl EventHandler for TestHandler {
-        fn on_event(&mut self, trigger: &dyn Trigger, _text: &str) {
+        fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
             self.0 = Some(trigger.get_type());
+        }
+
+        fn on_none(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
+            self.1 = Some(trigger.get_type());
         }
     }
 
@@ -116,17 +143,19 @@ mod tests {
         );
 
         lf.push(Box::new(RegexTrigger::new("success", "on success",
-                    TriggerType::Success, "success")));
+                    TriggerType::Success, "success", false)));
         lf.push(Box::new(RegexTrigger::new("failure", "on error",
-                    TriggerType::Error, "error")));
+                    TriggerType::Error, "error", false)));
 
-        let mut handler = TestHandler(None);
+        let mut handler = TestHandler(None, None);
         // test handlers
         lf.update(&mut vec![&mut handler]).unwrap();
         assert_eq!(handler.0, Some(TriggerType::Success));
+        assert_eq!(handler.1, Some(TriggerType::Error));
 
         lf.update(&mut vec![&mut handler]).unwrap();
         assert_eq!(handler.0, Some(TriggerType::Error));
+        assert_eq!(handler.1, Some(TriggerType::Success));
     }
 
     #[test]
@@ -141,13 +170,14 @@ mod tests {
         );
 
         lf.push(Box::new(RegexTrigger::new("success", "on success",
-                    TriggerType::Success, "success")));
+                    TriggerType::Success, "success", false)));
         lf.push(Box::new(RegexTrigger::new("failure", "on error",
-                    TriggerType::Error, "error")));
+                    TriggerType::Error, "error", false)));
 
-        let mut handler = TestHandler(None);
+        let mut handler = TestHandler(None, None);
         // test handlers
         lf.update(&mut vec![&mut handler]).unwrap();
         assert_eq!(handler.0, None);
+        assert_eq!(handler.1, None);
     }
 }

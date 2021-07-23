@@ -8,12 +8,29 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::str;
 
+pub trait DataSourceClone {
+    fn box_clone(&self) -> Box<dyn DataSource>;
+}
+
+impl<T> DataSourceClone for T
+where T: 'static + DataSource + Clone {
+    fn box_clone(&self) -> Box<dyn DataSource> {
+        Box::new(self.clone())
+    }
+}
+
 /// A datasource knows how to fetch a logfile
 /// from a location e.g. local file system,
 /// ssh or http
 #[typetag::serde(tag = "type")]
-pub trait DataSource {
+pub trait DataSource: DataSourceClone {
     fn load(&mut self) -> BoxResult<String>;
+}
+
+impl Clone for Box<dyn DataSource> {
+    fn clone(&self) -> Box<dyn DataSource> {
+        self.box_clone()
+    }
 }
 
 /// this is a dummy data source
@@ -21,7 +38,7 @@ pub trait DataSource {
 /// the vector until it is exhausted
 /// this is mostly useful to supply dummy data
 /// to logfile structs
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct InMemoryDataSource {
     data: Vec<String>
 }
@@ -129,7 +146,7 @@ where T: Read + Seek {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FileDataSource {
     line_limit: usize,
     path: String

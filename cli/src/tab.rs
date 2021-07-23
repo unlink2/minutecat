@@ -1,16 +1,20 @@
 use super::minutecat::trigger::TriggerType;
 use super::minutecat::logfile::EventHandler;
 use super::minutecat::trigger::Trigger;
+use super::minutecat::extra::ExtraData;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct TabState {
-    pub trigger_type: TriggerType
+    pub trigger_type: TriggerType,
+    pub slices: HashMap<String, String>
 }
 
 impl TabState {
     pub fn new() -> Self {
         Self {
-            trigger_type: TriggerType::NoEvent
+            trigger_type: TriggerType::NoEvent,
+            slices: HashMap::new()
         }
     }
 }
@@ -19,7 +23,8 @@ pub struct TabManager {
     pub state: Vec<TabState>,
     pub max: usize,
     pub index: usize,
-    pub scroll: (u16, u16)
+    pub scroll: (u16, u16),
+    pub tab_offset: usize
 }
 
 impl TabManager {
@@ -28,7 +33,8 @@ impl TabManager {
             state: vec![TabState::new(); max],
             index: 0,
             max,
-            scroll: (0, 0)
+            scroll: (0, 0),
+            tab_offset: 0
         }
     }
 
@@ -61,10 +67,33 @@ impl TabManager {
             self.index -= 1;
         }
     }
+
+    pub fn next_offset(&mut self) {
+        if self.tab_offset >= self.max-1 {
+            self.tab_offset = 0;
+        } else {
+            self.tab_offset += 1;
+        }
+    }
+
+    pub fn prev_offset(&mut self) {
+        if self.tab_offset <= 0 {
+            self.tab_offset = self.max-1;
+        } else {
+            self.tab_offset -= 1;
+        }
+    }
 }
 
 impl EventHandler for TabState {
-    fn on_event(&mut self, trigger: &dyn Trigger, _text: &str) {
+    fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, text: &str) {
+        self.slices.insert(trigger.name().into(), trigger.slice(text).unwrap_or("").into());
         self.trigger_type = trigger.get_type();
+    }
+
+    fn on_none(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
+        if self.slices.contains_key(trigger.name()) {
+            self.slices.remove(trigger.name());
+        }
     }
 }

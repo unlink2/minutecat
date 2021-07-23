@@ -80,7 +80,9 @@ pub struct AddReTrigger {
     pub name: String,
     pub desc: String,
     pub trigger_type: String,
-    pub regex: String
+    pub regex: String,
+    #[clap(long)]
+    pub invert: bool
 }
 
 #[derive(Clap)]
@@ -108,16 +110,21 @@ fn init_cfg_dir() -> std::io::Result<()> {
     std::fs::create_dir_all(config_path())
 }
 
-pub fn command_line() -> BoxResult<Interface> {
-    let options = Opts::parse();
-
+pub fn init_logset() -> BoxResult<(LogSet, String)> {
     let cfg_dir = config_path().join("config.yaml");
     let cfg_path = cfg_dir
             .to_str()
             .expect("could not find configuration directory!");
 
     init_cfg_dir()?;
-    let mut logset = LogSet::from_path(cfg_path)?;
+    let logset = LogSet::from_path(cfg_path)?;
+
+    return Ok((logset, cfg_path.into()));
+}
+
+pub fn command_line() -> BoxResult<Interface> {
+    let options = Opts::parse();
+    let (mut logset, cfg_path) = init_logset()?;
 
     let exit = match &options.subcmd {
         Some(subcmd) => {
@@ -133,7 +140,7 @@ pub fn command_line() -> BoxResult<Interface> {
         _ => false
     };
 
-    logset.to_file(cfg_path)?;
+    logset.to_file(&cfg_path)?;
     if exit {
         std::process::exit(0);
     }
@@ -189,7 +196,7 @@ pub fn add_re_trigger(re: &AddReTrigger, logset: &mut LogSet) -> BoxResult<bool>
         };
 
 
-        log.push(Box::new(RegexTrigger::new(&re.name, &re.desc, trigger_type, &re.regex)));
+        log.push(Box::new(RegexTrigger::new(&re.name, &re.desc, trigger_type, &re.regex, re.invert)));
 
     }
     Ok(true)
