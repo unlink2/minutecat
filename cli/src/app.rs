@@ -51,18 +51,24 @@ where B: Backend {
             if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
                 for (i, log) in interface.logset.logs.iter_mut().enumerate() {
                     // TODO handle error better!
-                    log.force_update(&mut vec![&mut tabs.state[i]]).unwrap();
+                    match log.force_update(&mut vec![&mut tabs.state[i]]) {
+                        Ok(_) => {},
+                        Err(err) => { tabs.state[i].slices.insert("Error".into(), format!("{}", err)); }
+                    }
                 }
             }
 
-            let sleep_duration = time::Duration::from_millis(1000);
+            let sleep_duration = time::Duration::from_millis(5000);
             // do forever
             loop {
                 if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
                     // update logs
                     for (i, log) in interface.logset.logs.iter_mut().enumerate() {
                         // TODO handle error better!
-                        log.update(&mut vec![&mut tabs.state[i]]).unwrap();
+                        match log.force_update(&mut vec![&mut tabs.state[i]]) {
+                            Ok(_) => {},
+                            Err(err) => { tabs.state[i].slices.insert("Error".into(), format!("{}", err)); }
+                        }
                     }
                 }
 

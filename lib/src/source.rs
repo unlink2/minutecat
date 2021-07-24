@@ -172,6 +172,30 @@ impl DataSource for FileDataSource {
     }
 }
 
+
+/**
+ * Http data input
+ */
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HttpDataSource {
+    url: String
+}
+
+impl HttpDataSource {
+    pub fn new(url: &str) -> Self {
+        Self {
+            url: url.into()
+        }
+    }
+}
+
+#[typetag::serde]
+impl DataSource for HttpDataSource {
+    fn load(&mut self) -> BoxResult<String> {
+        Ok(reqwest::blocking::get(&self.url)?.text()?)
+    }
+}
+
 // TODO this be tested in a sane way at all?
 
 #[cfg(test)]

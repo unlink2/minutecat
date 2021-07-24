@@ -77,6 +77,9 @@ impl Logfile {
     /// a logfile based on the task timer
     /// and the data source origin
     /// returns trigger results in a vec
+    /// Note that currently update may call long blocking IO operations
+    /// and is therefore best used in a thread.
+    /// There might be an async version in the future.
     pub fn update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
         // is it ready to update?
         if !self.task.is_due() {

@@ -8,6 +8,11 @@ use std::io::Read;
 use std::str;
 use std::path::Path;
 
+/// A logset is the logfile manager
+/// please note that logset may call blocking IO
+/// and should be used in threads if blocking is not desired.
+/// All structs in lib are thread safe and maye be placed inside Arc<Mutex>
+/// TODO There may be an async option in the future
 #[derive(Default, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct LogSet {
     pub logs: Vec<Logfile>
