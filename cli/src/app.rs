@@ -52,7 +52,7 @@ where B: Backend {
                 let res = if force {
                     log.force_update(&mut vec![&mut tabs.state[*index]])
                 } else {
-                    log.force_update(&mut vec![&mut tabs.state[*index]])
+                    log.update(&mut vec![&mut tabs.state[*index]])
                 };
                 match res {
                     Ok(_) => {},
