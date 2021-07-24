@@ -17,6 +17,8 @@ use chrono::prelude::DateTime;
 use chrono::Local;
 use std::time::{UNIX_EPOCH, Duration};
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time;
 
 pub struct App<B>
 where B: Backend {
@@ -24,6 +26,7 @@ where B: Backend {
     pub interface: Arc<Mutex<Interface>>,
     // this thread runs updates
     terminal: Terminal<B>,
+    update_handle: Option<thread::JoinHandle<()>>,
     events: Events
 }
 
@@ -34,6 +37,7 @@ where B: Backend {
             tabs: Arc::new(Mutex::new(TabManager::new(interface.logset.len()))),
             interface: Arc::new(Mutex::new(interface)),
             terminal,
+            update_handle: None,
             events: Events::new()
         }
     }
@@ -42,31 +46,34 @@ where B: Backend {
         let interface = self.interface.clone();
         let tabs = self.tabs.clone();
 
-        if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
-            for (i, log) in interface.logset.logs.iter_mut().enumerate() {
-                log.force_update(&mut vec![&mut tabs.state[i]])?;
+        self.update_handle = Some(thread::spawn(move || {
+            // spawn a thread that keeps going forever
+            if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
+                for (i, log) in interface.logset.logs.iter_mut().enumerate() {
+                    // TODO handle error better!
+                    log.force_update(&mut vec![&mut tabs.state[i]]).unwrap();
+                }
             }
-        }
+
+            let sleep_duration = time::Duration::from_millis(1000);
+            // do forever
+            loop {
+                if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
+                    // update logs
+                    for (i, log) in interface.logset.logs.iter_mut().enumerate() {
+                        // TODO handle error better!
+                        log.update(&mut vec![&mut tabs.state[i]]).unwrap();
+                    }
+                }
+
+                thread::sleep(sleep_duration);
+            }
+        }));
         Ok(())
-    }
-
-    pub fn update_thread(&mut self) -> BoxResult<bool> {
-        let interface = self.interface.clone();
-        let tabs = self.tabs.clone();
-
-        if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
-            // update logs
-            for (i, log) in interface.logset.logs.iter_mut().enumerate() {
-                log.update(&mut vec![&mut tabs.state[i]]).unwrap();
-            }
-        }
-
-        Ok(false)
     }
 
     pub fn update(&mut self) -> BoxResult<bool> {
         self.render()?;
-        self.update_thread()?;
 
         let tabs = self.tabs.clone();
 
