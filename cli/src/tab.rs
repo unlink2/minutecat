@@ -96,12 +96,12 @@ impl EventHandler for TabState {
             if event.did_trigger {
                 self.slices.insert(trigger.name().into(),
                 trigger.slice(event.text).unwrap_or("").into());
+                self.trigger_type = trigger.get_type();
             } else {
                 if self.slices.contains_key(trigger.name()) {
                     self.slices.remove(trigger.name());
                 }
             }
-            self.trigger_type = trigger.get_type();
         }
         if event.did_trigger || self.name == "" {
             self.text = event.text.into();
