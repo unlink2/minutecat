@@ -1,6 +1,6 @@
 use super::logset::LogSet;
 use super::logfile::Logfile;
-use super::source::FileDataSource;
+use super::source::{DataSource, HttpDataSource, FileDataSource};
 use super::task::{Task, ClockTimeSource};
 use super::error::BoxResult;
 use super::trigger::{Trigger, RegexTrigger, TriggerType};
@@ -24,34 +24,44 @@ pub trait Command<T> {
     fn undo(&mut self, obj: &mut T) -> BoxResult<()>;
 }
 
-pub struct AddLocalFileCommand {
+pub enum FileType {
+    Http,
+    Local
+}
+
+pub struct AddFileCommand {
     pub name: String,
     pub location: String,
     pub line_limit: usize,
     pub refresh_time: String,
+    pub file_type: FileType,
     pub can_undo: bool
 }
 
-impl AddLocalFileCommand {
+impl AddFileCommand {
     pub fn new(name: &str,
         location: &str,
         line_limit: usize,
-        refresh_time: &str) -> Self {
+        refresh_time: &str,
+        file_type: FileType) -> Self {
         Self {
             name: name.into(),
             location: location.into(),
             line_limit,
             refresh_time: refresh_time.into(),
-            can_undo: false
+            can_undo: false,
+            file_type
         }
     }
 }
 
-impl Command<LogSet> for AddLocalFileCommand {
+impl Command<LogSet> for AddFileCommand {
     fn execute(&mut self, logset: &mut LogSet) -> BoxResult<()> {
-        logset.logs.push(
-            Logfile::new(&self.name,
-                Box::new(FileDataSource::new(&self.location, self.line_limit)),
+        let ds: Box<dyn DataSource> = match self.file_type {
+            FileType::Local => Box::new(FileDataSource::new(&self.location, self.line_limit)),
+            FileType::Http => Box::new(HttpDataSource::new(&self.location))
+        };
+        logset.logs.push(Logfile::new(&self.name, ds,
                 Task::from_str(true, &self.refresh_time, Box::new(ClockTimeSource))?
             ));
         self.can_undo = true;
@@ -188,8 +198,8 @@ mod tests {
     fn it_should_execute_add_cmd() {
         let mut ls = LogSet::new();
 
-        let mut cmd1 = AddLocalFileCommand::new("name", "local/test", 100, "1h");
-        let mut cmd2 = AddLocalFileCommand::new("name", "local/test", 100, "1h");
+        let mut cmd1 = AddFileCommand::new("name", "local/test", 100, "1h", FileType::Local);
+        let mut cmd2 = AddFileCommand::new("name", "local/test", 100, "1h", FileType::Local);
 
         // ad twice undo one
         cmd1.execute(&mut ls).unwrap();
@@ -213,8 +223,8 @@ mod tests {
     fn it_should_delete_cmd() {
         let mut ls = LogSet::new();
 
-        let mut cmd1 = AddLocalFileCommand::new("name", "local/test", 100, "1h");
-        let mut cmd2 = AddLocalFileCommand::new("name", "local/test", 100, "1h");
+        let mut cmd1 = AddFileCommand::new("name", "local/test", 100, "1h", FileType::Local);
+        let mut cmd2 = AddFileCommand::new("name", "local/test", 100, "1h", FileType::Local);
 
         // ad twice undo one
         cmd1.execute(&mut ls).unwrap();

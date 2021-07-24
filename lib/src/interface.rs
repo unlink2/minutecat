@@ -152,11 +152,21 @@ pub fn command_line() -> BoxResult<Interface> {
 pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<bool> {
     match add.logtype.as_str() {
         "local" => {
-            let mut cmd = AddLocalFileCommand::new(
+            let mut cmd = AddFileCommand::new(
                 &add.name,
                 &add.location,
                 add.line_limit,
-                &add.refresh_time);
+                &add.refresh_time,
+                FileType::Local);
+            cmd.execute(logset)?;
+        },
+        "http" => {
+            let mut cmd = AddFileCommand::new(
+                &add.name,
+                &add.location,
+                add.line_limit,
+                &add.refresh_time,
+                FileType::Http);
             cmd.execute(logset)?;
         }
         _ => println!("Invalid logfile type!")

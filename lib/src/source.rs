@@ -23,7 +23,7 @@ where T: 'static + DataSource + Clone {
 /// from a location e.g. local file system,
 /// ssh or http
 #[typetag::serde(tag = "type")]
-pub trait DataSource: DataSourceClone {
+pub trait DataSource: DataSourceClone + Send {
     fn load(&mut self) -> BoxResult<String>;
 }
 
@@ -169,6 +169,30 @@ impl DataSource for FileDataSource {
         let mut rev_reader = TailReader::new(file,self.line_limit);
 
         return Ok(rev_reader.read_lines()?);
+    }
+}
+
+
+/**
+ * Http data input
+ */
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HttpDataSource {
+    url: String
+}
+
+impl HttpDataSource {
+    pub fn new(url: &str) -> Self {
+        Self {
+            url: url.into()
+        }
+    }
+}
+
+#[typetag::serde]
+impl DataSource for HttpDataSource {
+    fn load(&mut self) -> BoxResult<String> {
+        Ok(reqwest::blocking::get(&self.url)?.text()?)
     }
 }
 
