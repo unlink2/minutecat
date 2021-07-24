@@ -178,13 +178,13 @@ where B: Backend {
 
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .margin(1)
+                .margin(0)
                 .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)].as_ref())
                 .split(size);
 
             // outside border
             let block = Block::default()
-                .borders(Borders::ALL);
+                .borders(Borders::NONE);
             f.render_widget(block, size);
 
             Self::render_tabs(&mut f, interface, tab_manager, &chunks[0]);
