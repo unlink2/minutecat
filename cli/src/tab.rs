@@ -1,20 +1,25 @@
 use super::minutecat::trigger::TriggerType;
-use super::minutecat::logfile::EventHandler;
-use super::minutecat::trigger::Trigger;
-use super::minutecat::extra::ExtraData;
+use super::minutecat::logfile::{Event, EventHandler};
+use super::minutecat::task::TimeMs;
 use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct TabState {
     pub trigger_type: TriggerType,
-    pub slices: HashMap<String, String>
+    pub slices: HashMap<String, String>,
+    pub text: String,
+    pub name: String,
+    pub next_time: TimeMs
 }
 
 impl TabState {
     pub fn new() -> Self {
         Self {
+            text: "".into(),
+            name: "".into(),
             trigger_type: TriggerType::NoEvent,
-            slices: HashMap::new()
+            slices: HashMap::new(),
+            next_time: 0
         }
     }
 }
@@ -86,14 +91,22 @@ impl TabManager {
 }
 
 impl EventHandler for TabState {
-    fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, text: &str) {
-        self.slices.insert(trigger.name().into(), trigger.slice(text).unwrap_or("").into());
-        self.trigger_type = trigger.get_type();
-    }
-
-    fn on_none(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
-        if self.slices.contains_key(trigger.name()) {
-            self.slices.remove(trigger.name());
+    fn on_event(&mut self, event: &Event) {
+        if let Some(trigger) = event.trigger {
+            if event.did_trigger {
+                self.slices.insert(trigger.name().into(),
+                trigger.slice(event.text).unwrap_or("").into());
+            } else {
+                if self.slices.contains_key(trigger.name()) {
+                    self.slices.remove(trigger.name());
+                }
+            }
+            self.trigger_type = trigger.get_type();
+        }
+        if event.did_trigger || self.name == "" {
+            self.text = event.text.into();
+            self.name = event.name.into();
+            self.next_time = event.task.next_time();
         }
     }
 }

@@ -10,16 +10,21 @@ use super::extra::ExtraData;
 /// that is notified whenever a text trigger is true
 pub trait EventHandler {
     /// called when the trigger fires
-    fn on_event(&mut self, trigger: &dyn Trigger, extra: &mut ExtraData, text: &str);
+    fn on_event(&mut self, event: &Event);
+}
 
-    /// called when the trigger did not fire
-    fn on_none(&mut self, trigger: &dyn Trigger, extra: &mut ExtraData, text: &str);
+pub struct Event<'a> {
+    pub did_trigger: bool,
+    pub trigger: Option<&'a dyn Trigger>,
+    pub task: &'a Task,
+    pub extra: &'a mut ExtraData,
+    pub text: &'a str,
+    pub name: &'a str
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Logfile {
     pub name: String,
-    pub text: String,
     source: Box<dyn DataSource>,
     pub triggers: Vec<Box<dyn Trigger>>,
     pub task: Task,
@@ -31,7 +36,7 @@ pub struct Logfile {
 impl PartialEq for Logfile {
     // TODO maybe implement eq for triggers, source and task
     fn eq(&self, other: &Logfile) -> bool {
-        self.name == other.name && self.text == other.text
+        self.name == other.name && self.triggers.len()== other.triggers.len()
     }
 }
 
@@ -45,7 +50,6 @@ impl Logfile {
     pub fn new(name: &str, source: Box<dyn DataSource>, task: Task) -> Self {
         Self {
             name: name.into(),
-            text: "".into(),
             source,
             triggers: vec![],
             task,
@@ -90,23 +94,40 @@ impl Logfile {
 
     pub fn force_update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
         // if so refresh source
-        self.text = self.source.as_mut().load()?;
+        let text = self.source.as_mut().load()?;
 
-        self.check(handlers)?;
+        self.check(handlers, &text)?;
 
         return Ok(true);
     }
 
-    pub fn check(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<()> {
+    pub fn check(&mut self, handlers: &mut Vec<&mut dyn EventHandler>, text: &str) -> BoxResult<()> {
         // and check triggers
-        for trigger in &self.triggers[..] {
-            if trigger.check(&self.text)? {
+
+        if self.triggers.len() == 0 {
+            let event = Event {
+                did_trigger: false,
+                trigger: None,
+                task: &self.task,
+                extra: &mut self.extra,
+                text,
+                name: &self.name
+            };
+            for handler in &mut handlers[..] {
+                handler.on_event(&event);
+            }
+        } else {
+            for trigger in &self.triggers[..] {
+                let event = Event {
+                    did_trigger: trigger.check(&text)?,
+                    trigger: Some(trigger.as_ref()),
+                    task: &self.task,
+                    extra: &mut self.extra,
+                    text,
+                    name: &self.name
+                };
                 for handler in &mut handlers[..] {
-                    handler.on_event(trigger.as_ref(), &mut self.extra, &self.text);
-                }
-            } else {
-                for handler in &mut handlers[..] {
-                    handler.on_none(trigger.as_ref(), &mut self.extra, &self.text);
+                    handler.on_event(&event);
                 }
             }
         }
@@ -125,12 +146,12 @@ mod tests {
 
     struct TestHandler(Option<TriggerType>, Option<TriggerType>);
     impl EventHandler for TestHandler {
-        fn on_event(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
-            self.0 = Some(trigger.get_type());
-        }
-
-        fn on_none(&mut self, trigger: &dyn Trigger, _extra: &mut ExtraData, _text: &str) {
-            self.1 = Some(trigger.get_type());
+        fn on_event(&mut self, event: &Event) {
+            if event.did_trigger {
+                self.0 = Some(event.trigger.unwrap().get_type());
+            } else {
+                self.1 = Some(event.trigger.unwrap().get_type());
+            }
         }
     }
 

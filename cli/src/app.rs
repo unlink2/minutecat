@@ -42,37 +42,57 @@ where B: Backend {
         }
     }
 
+    pub fn update_logs(interface: &Arc<Mutex<Interface>>, tabs: &Arc<Mutex<TabManager>>, index: &mut usize, force: bool) {
+        if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
+            if interface.logset.len() > 0 {
+                // update logs
+                // TODO handle errors better!
+                let log = &mut interface.logset.logs[*index];
+
+                let res = if force {
+                    log.force_update(&mut vec![&mut tabs.state[*index]])
+                } else {
+                    log.force_update(&mut vec![&mut tabs.state[*index]])
+                };
+                match res {
+                    Ok(_) => {},
+                    Err(err) => { tabs.state[*index].slices.insert("Error".into(), format!("{}", err)); }
+                }
+
+                *index += 1;
+                if *index >= interface.logset.len() {
+                    *index = 0;
+                }
+            }
+        }
+
+        if !force {
+            thread::sleep(time::Duration::from_millis(500));
+        }
+    }
+
     pub fn init(&mut self) -> BoxResult<()> {
         let interface = self.interface.clone();
         let tabs = self.tabs.clone();
 
         self.update_handle = Some(thread::spawn(move || {
             // spawn a thread that keeps going forever
-            if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
-                for (i, log) in interface.logset.logs.iter_mut().enumerate() {
-                    // TODO handle error better!
-                    match log.force_update(&mut vec![&mut tabs.state[i]]) {
-                        Ok(_) => {},
-                        Err(err) => { tabs.state[i].slices.insert("Error".into(), format!("{}", err)); }
+            loop {
+                let mut index = 0;
+                // TODO this migth deadlock!
+                loop {
+                    Self::update_logs(&interface, &tabs, &mut index, true);
+                    if index == 0 {
+                        break;
                     }
                 }
+                break;
             }
 
-            let sleep_duration = time::Duration::from_millis(5000);
+            let mut index = 0;
             // do forever
             loop {
-                if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
-                    // update logs
-                    for (i, log) in interface.logset.logs.iter_mut().enumerate() {
-                        // TODO handle error better!
-                        match log.force_update(&mut vec![&mut tabs.state[i]]) {
-                            Ok(_) => {},
-                            Err(err) => { tabs.state[i].slices.insert("Error".into(), format!("{}", err)); }
-                        }
-                    }
-                }
-
-                thread::sleep(sleep_duration);
+                Self::update_logs(&interface, &tabs, &mut index, false);
             }
         }));
         Ok(())
@@ -100,13 +120,14 @@ where B: Backend {
             }
         }
 
+        thread::sleep(Duration::from_millis(10));
+
         return Ok(false);
     }
 
-    pub fn render_tabs(f: &mut Frame<B>, interface: &Interface, tab_manager: &TabManager, chunk: &Rect) {
+    pub fn render_tabs(f: &mut Frame<B>, tab_manager: &TabManager, chunk: &Rect) {
         // get tab titles
-        let titles: Vec<Spans> = interface
-            .logset.logs[tab_manager.tab_offset..]
+        let titles: Vec<Spans> = tab_manager.state[tab_manager.tab_offset..]
             .iter()
             .enumerate()
             .map(|(i, t)| {
@@ -138,7 +159,7 @@ where B: Backend {
         f.render_widget(tabs, *chunk);
     }
 
-    pub fn render_no_logs(f: &mut Frame<B>, _interface: &Interface, tab_manager: &TabManager, chunk: &Rect) {
+    pub fn render_no_logs(f: &mut Frame<B>, tab_manager: &TabManager, chunk: &Rect) {
         let content = Paragraph::new("No Logs")
             .block(Block::default().borders(Borders::ALL).title(
                     "No Logs"))
@@ -148,10 +169,10 @@ where B: Backend {
         f.render_widget(content, *chunk);
     }
 
-    pub fn render_content(f: &mut Frame<B>, interface: &Interface, tab_manager: &TabManager, chunk: &Rect) {
-        let log = &interface.logset.logs[tab_manager.index];
+    pub fn render_content(f: &mut Frame<B>, tab_manager: &TabManager, chunk: &Rect) {
+        let log = &tab_manager.state[tab_manager.index];
 
-        let d = UNIX_EPOCH + Duration::from_millis(log.task.next_time() as u64);
+        let d = UNIX_EPOCH + Duration::from_millis(log.next_time as u64);
         let datetime = DateTime::<Local>::from(d);
 
         // render content
@@ -164,7 +185,7 @@ where B: Backend {
         f.render_widget(content, *chunk);
     }
 
-    pub fn render_info(f: &mut Frame<B>, _interface: &Interface, tab_manager: &TabManager, chunk: &Rect) {
+    pub fn render_info(f: &mut Frame<B>, tab_manager: &TabManager, chunk: &Rect) {
         // get slices
         let tab = &tab_manager.state[tab_manager.index];
 
@@ -198,10 +219,9 @@ where B: Backend {
     }
 
     pub fn render(&mut self) -> BoxResult<()> {
-        let interface = self.interface.clone();
         let tab_manager = self.tabs.clone();
 
-        if let (Ok(interface), Ok(tab_manager)) = (interface.lock(), tab_manager.lock()) {
+        if let Ok(tab_manager) = tab_manager.lock() {
             self.terminal.draw(|mut f| {
                 let size = f.size();
 
@@ -216,14 +236,14 @@ where B: Backend {
                     .borders(Borders::NONE);
                 f.render_widget(block, size);
 
-                Self::render_tabs(&mut f, &interface, &tab_manager, &chunks[0]);
+                Self::render_tabs(&mut f, &tab_manager, &chunks[0]);
 
-                if interface.logset.len() == 0 {
-                    Self::render_no_logs(&mut f, &interface, &tab_manager, &chunks[1]);
+                if tab_manager.state.len() == 0 {
+                    Self::render_no_logs(&mut f, &tab_manager, &chunks[1]);
                 } else {
-                    Self::render_content(&mut f, &interface, &tab_manager, &chunks[1]);
+                    Self::render_content(&mut f, &tab_manager, &chunks[1]);
                     // render info about matches
-                    Self::render_info(&mut f, &interface, &tab_manager, &chunks[2]);
+                    Self::render_info(&mut f, &tab_manager, &chunks[2]);
                 }
             })?;
         }
