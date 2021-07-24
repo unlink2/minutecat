@@ -23,7 +23,7 @@ where T: 'static + DataSource + Clone {
 /// from a location e.g. local file system,
 /// ssh or http
 #[typetag::serde(tag = "type")]
-pub trait DataSource: DataSourceClone {
+pub trait DataSource: DataSourceClone + Send {
     fn load(&mut self) -> BoxResult<String>;
 }
 

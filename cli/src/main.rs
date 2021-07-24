@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // always save in the end!
-    app.interface.logset.to_file(&app.interface.cfg_path)?;
+    // interface.logset.to_file(&interface.cfg_path)?;
 
     Ok(())
 }

@@ -24,7 +24,7 @@ where T: 'static + TimeSource + Clone {
 /// Time source expects time to be returned in
 /// ms
 #[typetag::serde(tag = "type")]
-pub trait TimeSource: TimeSourceClone {
+pub trait TimeSource: TimeSourceClone + Send {
     fn get_time_ms(&mut self) -> TimeMs;
 }
 

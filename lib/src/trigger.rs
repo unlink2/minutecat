@@ -29,7 +29,7 @@ pub enum TriggerType {
 /// cause a logfile notification to appear
 /// e.g. regex match, time since last change
 #[typetag::serde(tag = "type")]
-pub trait Trigger: TriggerClone {
+pub trait Trigger: TriggerClone + Send {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
     fn check(&self, text: &str) -> BoxResult<bool>;

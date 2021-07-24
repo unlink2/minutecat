@@ -4,6 +4,7 @@ extern crate regex;
 extern crate serde_yaml;
 extern crate clap;
 extern crate dirs;
+extern crate reqwest;
 
 pub mod logset;
 pub mod logfile;

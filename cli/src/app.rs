@@ -16,12 +16,13 @@ use tui::{
 use chrono::prelude::DateTime;
 use chrono::Local;
 use std::time::{UNIX_EPOCH, Duration};
-
+use std::sync::{Arc, Mutex};
 
 pub struct App<B>
 where B: Backend {
-    pub tabs: TabManager,
-    pub interface: Interface,
+    pub tabs: Arc<Mutex<TabManager>>,
+    pub interface: Arc<Mutex<Interface>>,
+    // this thread runs updates
     terminal: Terminal<B>,
     events: Events
 }
@@ -30,45 +31,59 @@ impl<B> App<B>
 where B: Backend {
     pub fn new(interface: Interface, terminal: Terminal<B>) -> Self {
         Self {
-            tabs: TabManager::new(interface.logset.len()),
-            interface,
+            tabs: Arc::new(Mutex::new(TabManager::new(interface.logset.len()))),
+            interface: Arc::new(Mutex::new(interface)),
             terminal,
             events: Events::new()
         }
     }
 
     pub fn init(&mut self) -> BoxResult<()> {
-        let interface = &mut self.interface;
-        let tabs = &mut self.tabs;
-        for (i, log) in interface.logset.logs.iter_mut().enumerate() {
-            log.force_update(&mut vec![&mut tabs.state[i]])?;
+        let interface = self.interface.clone();
+        let tabs = self.tabs.clone();
+
+        if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
+            for (i, log) in interface.logset.logs.iter_mut().enumerate() {
+                log.force_update(&mut vec![&mut tabs.state[i]])?;
+            }
         }
         Ok(())
     }
 
-    pub fn update(&mut self) -> BoxResult<bool> {
-        self.render()?;
+    pub fn update_thread(&mut self) -> BoxResult<bool> {
+        let interface = self.interface.clone();
+        let tabs = self.tabs.clone();
 
-        let interface = &mut self.interface;
-        let tabs = &mut self.tabs;
-        // update logs
-
-        for (i, log) in interface.logset.logs.iter_mut().enumerate() {
-            log.update(&mut vec![&mut tabs.state[i]])?;
+        if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
+            // update logs
+            for (i, log) in interface.logset.logs.iter_mut().enumerate() {
+                log.update(&mut vec![&mut tabs.state[i]]).unwrap();
+            }
         }
 
-        if let Event::Input(input) = self.events.next()? {
-            match input {
-                Key::Char('q') => {
-                    return Ok(true);
-                },
-                Key::Right => self.tabs.next(),
-                Key::Left => self.tabs.prev(),
-                Key::Up => self.tabs.down(),
-                Key::Down => self.tabs.up(),
-                Key::PageUp => self.tabs.next_offset(),
-                Key::PageDown => self.tabs.prev_offset(),
-                _ => {}
+        Ok(false)
+    }
+
+    pub fn update(&mut self) -> BoxResult<bool> {
+        self.render()?;
+        self.update_thread()?;
+
+        let tabs = self.tabs.clone();
+
+        if let Ok(mut tabs) = tabs.lock() {
+            if let Event::Input(input) = self.events.next()? {
+                match input {
+                    Key::Char('q') => {
+                        return Ok(true);
+                    },
+                    Key::Right => tabs.next(),
+                    Key::Left => tabs.prev(),
+                    Key::Up => tabs.down(),
+                    Key::Down => tabs.up(),
+                    Key::PageUp => tabs.next_offset(),
+                    Key::PageDown => tabs.prev_offset(),
+                    _ => {}
+                }
             }
         }
 
@@ -170,34 +185,35 @@ where B: Backend {
     }
 
     pub fn render(&mut self) -> BoxResult<()> {
-        let interface = &self.interface;
-        let tab_manager = &self.tabs;
+        let interface = self.interface.clone();
+        let tab_manager = self.tabs.clone();
 
-        self.terminal.draw(|mut f| {
-            let size = f.size();
+        if let (Ok(interface), Ok(tab_manager)) = (interface.lock(), tab_manager.lock()) {
+            self.terminal.draw(|mut f| {
+                let size = f.size();
 
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .margin(0)
-                .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)].as_ref())
-                .split(size);
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .margin(0)
+                    .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)].as_ref())
+                    .split(size);
 
-            // outside border
-            let block = Block::default()
-                .borders(Borders::NONE);
-            f.render_widget(block, size);
+                // outside border
+                let block = Block::default()
+                    .borders(Borders::NONE);
+                f.render_widget(block, size);
 
-            Self::render_tabs(&mut f, interface, tab_manager, &chunks[0]);
+                Self::render_tabs(&mut f, &interface, &tab_manager, &chunks[0]);
 
-            if interface.logset.len() == 0 {
-                Self::render_no_logs(&mut f, interface, tab_manager, &chunks[1]);
-            } else {
-                Self::render_content(&mut f, interface, tab_manager, &chunks[1]);
-                // render info about matches
-                Self::render_info(&mut f, interface, tab_manager, &chunks[2]);
-            }
-        })?;
-
+                if interface.logset.len() == 0 {
+                    Self::render_no_logs(&mut f, &interface, &tab_manager, &chunks[1]);
+                } else {
+                    Self::render_content(&mut f, &interface, &tab_manager, &chunks[1]);
+                    // render info about matches
+                    Self::render_info(&mut f, &interface, &tab_manager, &chunks[2]);
+                }
+            })?;
+        }
         Ok(())
     }
 }
