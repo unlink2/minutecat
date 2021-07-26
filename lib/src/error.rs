@@ -61,3 +61,12 @@ impl fmt::Debug for UndefinedExtraData {
         write!(f, "{}", self.to_string())
     }
 }
+
+#[derive(Debug)]
+pub struct FromStringError;
+
+impl fmt::Display for FromStringError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}

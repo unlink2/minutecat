@@ -1,7 +1,9 @@
 use super::serde::{Serialize, Deserialize};
 use super::typetag;
-use super::error::BoxResult;
+use super::error::{FromStringError, BoxResult};
 use super::regex::Regex;
+use std::fmt;
+use std::str::FromStr;
 
 pub trait TriggerClone {
     fn box_clone(&self) -> Box<dyn Trigger>;
@@ -23,6 +25,24 @@ pub enum TriggerType {
     Success,
     Warning,
     Error
+}
+
+impl fmt::Display for TriggerType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl FromStr for TriggerType {
+    type Err = FromStringError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "success" => Ok(Self::Success),
+            "warning" => Ok(Self::Warning),
+            "error" => Ok(Self::Error),
+            _ => Err(FromStringError)
+        }
+    }
 }
 
 /// A trigger is anything that can

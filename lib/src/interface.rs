@@ -59,7 +59,7 @@ pub struct Add {
     name: String,
     location: String,
     line_limit: usize,
-    logtype: String,
+    logtype: FileType,
     refresh_time: String
 }
 
@@ -76,7 +76,7 @@ pub struct AddReTrigger {
     pub index: usize,
     pub name: String,
     pub desc: String,
-    pub trigger_type: String,
+    pub trigger_type: TriggerType,
     pub regex: String,
     #[clap(long)]
     pub invert: bool
@@ -150,8 +150,8 @@ pub fn command_line() -> BoxResult<Interface> {
 }
 
 pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<bool> {
-    match add.logtype.as_str() {
-        "local" => {
+    match add.logtype {
+        FileType::Local => {
             let mut cmd = AddFileCommand::new(
                 &add.name,
                 &add.location,
@@ -160,7 +160,7 @@ pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<bool> {
                 FileType::Local);
             cmd.execute(logset)?;
         },
-        "http" => {
+        FileType::Http => {
             let mut cmd = AddFileCommand::new(
                 &add.name,
                 &add.location,
@@ -169,7 +169,6 @@ pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<bool> {
                 FileType::Http);
             cmd.execute(logset)?;
         }
-        _ => println!("Invalid logfile type!")
     }
     Ok(true)
 }
@@ -194,17 +193,12 @@ pub fn add_re_trigger(re: &AddReTrigger, logset: &mut LogSet) -> BoxResult<bool>
     } else {
         let log = &mut logset.logs[re.index];
 
-        let trigger_type = match re.trigger_type.as_str() {
-            "success" => TriggerType::Success,
-            "warning" => TriggerType::Warning,
-            "error" => TriggerType::Error,
-            _ => {
+        if re.trigger_type == TriggerType::NoEvent {
                 println!("Unknown trigger type!");
                 return Ok(true);
-            }
-        };
+        }
 
-        let mut cmd = AddRegexTriggerCommand::new(&re.name, &re.desc, trigger_type, &re.regex, re.invert);
+        let mut cmd = AddRegexTriggerCommand::new(&re.name, &re.desc, re.trigger_type, &re.regex, re.invert);
         cmd.execute(log)?;
     }
     Ok(true)

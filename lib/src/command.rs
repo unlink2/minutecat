@@ -2,9 +2,10 @@ use super::logset::LogSet;
 use super::logfile::Logfile;
 use super::source::{DataSource, HttpDataSource, FileDataSource};
 use super::task::{Task, ClockTimeSource};
-use super::error::BoxResult;
+use super::error::{BoxResult, FromStringError};
 use super::trigger::{Trigger, RegexTrigger, TriggerType};
-
+use std::fmt;
+use std::str::FromStr;
 /// a command is an action that modifies a struct
 /// it has the property of offering a detached setter mechanism
 /// that can be e.g. used in queues
@@ -24,10 +25,29 @@ pub trait Command<T> {
     fn undo(&mut self, obj: &mut T) -> BoxResult<()>;
 }
 
+#[derive(Debug)]
 pub enum FileType {
     Http,
     Local
 }
+
+impl fmt::Display for FileType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl FromStr for FileType {
+    type Err = FromStringError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "local" => Ok(Self::Local),
+            "http" => Ok(Self::Http),
+            _ => Err(FromStringError)
+        }
+    }
+}
+
 
 pub struct AddFileCommand {
     pub name: String,
