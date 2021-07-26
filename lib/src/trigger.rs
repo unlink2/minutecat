@@ -5,6 +5,51 @@ use super::regex::Regex;
 use std::fmt;
 use std::str::FromStr;
 
+#[derive(Clone, Serialize, Deserialize)]
+pub enum TriggerTypes {
+    Regex(RegexTrigger),
+    Generic(Box<dyn Trigger>)
+}
+
+#[typetag::serde]
+impl Trigger for TriggerTypes {
+    fn name(&self) -> &str {
+        match self {
+            Self::Regex(t) => t.name(),
+            Self::Generic(t) => t.name()
+        }
+    }
+
+    fn description(&self) -> &str {
+        match self {
+            Self::Regex(t) => t.description(),
+            Self::Generic(t) => t.description()
+        }
+    }
+
+    fn check(&self, text: &str) -> BoxResult<bool> {
+        match self {
+            Self::Regex(t) => t.check(text),
+            Self::Generic(t) => t.check(text)
+        }
+    }
+
+    /// returns the slice that fired the trigger
+    fn slice<'a>(&self, text: &'a str) -> BoxResult<&'a str> {
+        match self {
+            Self::Regex(t) => t.slice(text),
+            Self::Generic(t) => t.slice(text)
+        }
+    }
+
+    fn get_type(&self) -> TriggerType {
+        match self {
+            Self::Regex(t) => t.get_type(),
+            Self::Generic(t) => t.get_type()
+        }
+    }
+}
+
 pub trait TriggerClone {
     fn box_clone(&self) -> Box<dyn Trigger>;
 }

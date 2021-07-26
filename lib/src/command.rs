@@ -1,9 +1,9 @@
 use super::logset::LogSet;
 use super::logfile::Logfile;
-use super::source::{DataSource, HttpDataSource, FileDataSource};
-use super::task::{Task, ClockTimeSource};
+use super::source::{DataSourceTypes, HttpDataSource, FileDataSource};
+use super::task::{Task, ClockTimeSource, TimeSourceTypes};
 use super::error::{BoxResult, FromStringError};
-use super::trigger::{Trigger, RegexTrigger, TriggerType};
+use super::trigger::{TriggerTypes, RegexTrigger, TriggerType};
 use std::fmt;
 use std::str::FromStr;
 /// a command is an action that modifies a struct
@@ -77,12 +77,12 @@ impl AddFileCommand {
 
 impl Command<LogSet> for AddFileCommand {
     fn execute(&mut self, logset: &mut LogSet) -> BoxResult<()> {
-        let ds: Box<dyn DataSource> = match self.file_type {
-            FileType::Local => Box::new(FileDataSource::new(&self.location, self.line_limit)),
-            FileType::Http => Box::new(HttpDataSource::new(&self.location))
+        let ds = match self.file_type {
+            FileType::Local => DataSourceTypes::File(FileDataSource::new(&self.location, self.line_limit)),
+            FileType::Http => DataSourceTypes::Http(HttpDataSource::new(&self.location))
         };
         logset.logs.push(Logfile::new(&self.name, ds,
-                Task::from_str(true, &self.refresh_time, Box::new(ClockTimeSource))?
+                Task::from_str(true, &self.refresh_time, TimeSourceTypes::Clock(ClockTimeSource))?
             ));
         self.can_undo = true;
         Ok(())
@@ -158,7 +158,7 @@ impl AddRegexTriggerCommand {
 
 impl Command<Logfile> for AddRegexTriggerCommand {
     fn execute(&mut self, log: &mut Logfile) -> BoxResult<()> {
-        log.push(Box::new(RegexTrigger::new(
+        log.push(TriggerTypes::Regex(RegexTrigger::new(
                     &self.name,
                     &self.desc,
                     self.trigger_type,
@@ -179,7 +179,7 @@ impl Command<Logfile> for AddRegexTriggerCommand {
 
 pub struct RemoveTriggerCommand {
     index: usize,
-    removed: Option<Box<dyn Trigger>>
+    removed: Option<TriggerTypes>
 }
 
 impl RemoveTriggerCommand {
@@ -263,8 +263,8 @@ mod tests {
     #[test]
     fn it_should_add_re_trigger() {
         let mut l = Logfile::new("name",
-            Box::new(InMemoryDataSource::new(vec![])),
-            Task::new(false, 0, Box::new(ClockTimeSource)));
+            DataSourceTypes::InMemory(InMemoryDataSource::new(vec![])),
+            Task::new(false, 0, TimeSourceTypes::Clock(ClockTimeSource)));
 
         let mut cmd = AddRegexTriggerCommand::new("name", "desc", TriggerType::NoEvent, "", false);
         cmd.execute(&mut l).unwrap();
@@ -278,8 +278,8 @@ mod tests {
     #[test]
     fn it_should_remove_re_trigger() {
         let mut l = Logfile::new("name",
-            Box::new(InMemoryDataSource::new(vec![])),
-            Task::new(false, 0, Box::new(ClockTimeSource)));
+            DataSourceTypes::InMemory(InMemoryDataSource::new(vec![])),
+            Task::new(false, 0, TimeSourceTypes::Clock(ClockTimeSource)));
 
         let mut cmd = AddRegexTriggerCommand::new("name", "desc", TriggerType::NoEvent, "", false);
         let mut delcmd = RemoveTriggerCommand::new(0);

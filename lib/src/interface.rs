@@ -1,5 +1,5 @@
 use super::logset::LogSet;
-use super::trigger::TriggerType;
+use super::trigger::{Trigger, TriggerType};
 use std::path::PathBuf;
 use std::str::FromStr;
 use super::dirs;
