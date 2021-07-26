@@ -56,6 +56,24 @@ impl TimeSource for InMemoryTimeSource {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub enum TimeSourceTypes {
+    Clock(ClockTimeSource),
+    InMemory(InMemoryTimeSource),
+    Generic(Box<dyn TimeSource>)
+}
+
+#[typetag::serde]
+impl TimeSource for TimeSourceTypes {
+    fn get_time_ms(&mut self) -> TimeMs {
+        match self {
+            Self::Clock(ts) => ts.get_time_ms(),
+            Self::InMemory(ts) => ts.get_time_ms(),
+            Self::Generic(ts) => ts.get_time_ms()
+        }
+    }
+}
+
 /// actual time-based source
 /// this is usually the source you want
 #[derive(Clone, Serialize, Deserialize)]
@@ -79,11 +97,11 @@ pub struct Task {
     done: bool,
     delay: TimeMs,
     start: TimeMs,
-    time_src: Box<dyn TimeSource>
+    time_src: TimeSourceTypes
 }
 
 impl Task {
-    pub fn new(repeat: bool, delay: TimeMs, mut time_src: Box<dyn TimeSource>) -> Self {
+    pub fn new(repeat: bool, delay: TimeMs, mut time_src: TimeSourceTypes) -> Self {
         Self {
             repeat,
             done: false,
@@ -93,7 +111,7 @@ impl Task {
         }
     }
 
-    pub fn from_str(repeat: bool, time_str: &str, time_src: Box<dyn TimeSource>) -> BoxResult<Self> {
+    pub fn from_str(repeat: bool, time_str: &str, time_src: TimeSourceTypes) -> BoxResult<Self> {
         Ok(Self::new(repeat, Self::scan(time_str)?, time_src))
     }
 
@@ -211,7 +229,7 @@ mod tests {
 
     #[test]
     fn it_should_not_trigger() {
-        let mut t = Task::new(true, 10, Box::new(InMemoryTimeSource::new(vec![101, 101, 100])));
+        let mut t = Task::new(true, 10, TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![101, 101, 100])));
 
         assert!(!t.done);
         assert_eq!(t.start, 100);
@@ -222,7 +240,7 @@ mod tests {
 
     #[test]
     fn it_should_trigger_and_repeat() {
-        let mut t = Task::new(true, 10, Box::new(InMemoryTimeSource::new(vec![111, 111, 100])));
+        let mut t = Task::new(true, 10, TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![111, 111, 100])));
 
         assert!(!t.done);
         assert_eq!(t.start, 100);
@@ -233,7 +251,7 @@ mod tests {
 
     #[test]
     fn it_should_trigger_and_not_repeat() {
-        let mut t = Task::new(false, 10, Box::new(InMemoryTimeSource::new(vec![122, 111, 111, 100])));
+        let mut t = Task::new(false, 10, TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![122, 111, 111, 100])));
 
         assert!(!t.done);
         assert_eq!(t.start, 100);
@@ -257,7 +275,7 @@ mod tests {
     #[test]
     fn it_should_revert_time_str() {
         let ms = Task::from_str(false, "1h20m10s5",
-            Box::new(InMemoryTimeSource::new(vec![]))).unwrap();
+            TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![]))).unwrap();
         assert_eq!(ms.get_time_str(), "1h20m10s5ms".to_string());
     }
 }

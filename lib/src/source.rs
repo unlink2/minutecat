@@ -8,6 +8,26 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::str;
 
+#[derive(Clone, Serialize, Deserialize)]
+pub enum DataSourceTypes {
+    InMemory(InMemoryDataSource),
+    File(FileDataSource),
+    Http(HttpDataSource),
+    Generic(Box<dyn DataSource>)
+}
+
+#[typetag::serde]
+impl DataSource for DataSourceTypes {
+    fn load(&mut self) -> BoxResult<String> {
+        match self {
+            Self::InMemory(s) => s.load(),
+            Self::File(s) => s.load(),
+            Self::Http(s) => s.load(),
+            Self::Generic(s) => s.load()
+        }
+    }
+}
+
 pub trait DataSourceClone {
     fn box_clone(&self) -> Box<dyn DataSource>;
 }
