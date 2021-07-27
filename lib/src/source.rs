@@ -45,6 +45,13 @@ where T: 'static + DataSource + Clone {
 #[typetag::serde(tag = "type")]
 pub trait DataSource: DataSourceClone + Send {
     fn load(&mut self) -> BoxResult<String>;
+
+    // returns true if this task
+    // could block execution for
+    // a long time
+    fn could_block(&self) -> bool {
+        false
+    }
 }
 
 impl Clone for Box<dyn DataSource> {
@@ -213,6 +220,10 @@ impl HttpDataSource {
 impl DataSource for HttpDataSource {
     fn load(&mut self) -> BoxResult<String> {
         Ok(reqwest::blocking::get(&self.url)?.text()?)
+    }
+
+    fn could_block(&self) -> bool {
+        true
     }
 }
 
