@@ -63,9 +63,9 @@ impl LogSet {
         self.logs.len()
     }
 
-    pub fn update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
+    pub async fn update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
         for log in &mut self.logs {
-            log.update(handlers)?;
+            log.update(handlers).await?;
         }
         Ok(true)
     }

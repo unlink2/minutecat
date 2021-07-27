@@ -84,17 +84,17 @@ impl Logfile {
     /// Note that currently update may call long blocking IO operations
     /// and is therefore best used in a thread.
     /// There might be an async version in the future.
-    pub fn update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
+    pub async fn update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
         // is it ready to update?
         if !self.task.is_due() {
             return Ok(false);
         }
-        self.force_update(handlers)
+        self.force_update(handlers).await
     }
 
-    pub fn force_update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
+    pub async fn force_update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
         // if so refresh source
-        let text = self.source.load()?;
+        let text = self.source.load().await?;
 
         self.check(handlers, &text)?;
 
@@ -156,8 +156,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn it_should_trigger_and_call_handlers() {
+    #[tokio::test]
+    async fn it_should_trigger_and_call_handlers() {
         let mut lf = Logfile::new(
             "test",
             DataSourceTypes::InMemory(InMemoryDataSource::new(vec![
@@ -174,17 +174,17 @@ mod tests {
 
         let mut handler = TestHandler(None, None);
         // test handlers
-        lf.update(&mut vec![&mut handler]).unwrap();
+        lf.update(&mut vec![&mut handler]).await.unwrap();
         assert_eq!(handler.0, Some(TriggerType::Success));
         assert_eq!(handler.1, Some(TriggerType::Error));
 
-        lf.update(&mut vec![&mut handler]).unwrap();
+        lf.update(&mut vec![&mut handler]).await.unwrap();
         assert_eq!(handler.0, Some(TriggerType::Error));
         assert_eq!(handler.1, Some(TriggerType::Success));
     }
 
-    #[test]
-    fn it_should_not_trigger() {
+    #[tokio::test]
+    async fn it_should_not_trigger() {
         let mut lf = Logfile::new(
             "test",
             DataSourceTypes::InMemory(InMemoryDataSource::new(vec![
@@ -201,7 +201,7 @@ mod tests {
 
         let mut handler = TestHandler(None, None);
         // test handlers
-        lf.update(&mut vec![&mut handler]).unwrap();
+        lf.update(&mut vec![&mut handler]).await.unwrap();
         assert_eq!(handler.0, None);
         assert_eq!(handler.1, None);
     }
