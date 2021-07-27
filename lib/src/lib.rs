@@ -5,6 +5,8 @@ extern crate serde_yaml;
 extern crate clap;
 extern crate dirs;
 extern crate reqwest;
+extern crate tokio;
+extern crate async_trait;
 
 pub mod logset;
 pub mod logfile;

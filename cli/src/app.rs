@@ -16,17 +16,13 @@ use tui::{
 use chrono::prelude::DateTime;
 use chrono::Local;
 use std::time::{UNIX_EPOCH, Duration};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time;
 
 pub struct App<B>
 where B: Backend {
-    pub tabs: Arc<Mutex<TabManager>>,
-    pub interface: Arc<Mutex<Interface>>,
+    pub tabs: TabManager,
+    pub interface: Interface,
     // this thread runs updates
     terminal: Terminal<B>,
-    update_handle: Option<thread::JoinHandle<()>>,
     events: Events
 }
 
@@ -34,93 +30,55 @@ impl<B> App<B>
 where B: Backend {
     pub fn new(interface: Interface, terminal: Terminal<B>) -> Self {
         Self {
-            tabs: Arc::new(Mutex::new(TabManager::new(interface.logset.len()))),
-            interface: Arc::new(Mutex::new(interface)),
+            tabs: TabManager::new(interface.logset.len()),
+            interface,
             terminal,
-            update_handle: None,
             events: Events::new()
         }
     }
 
-    pub fn update_logs(interface: &Arc<Mutex<Interface>>, tabs: &Arc<Mutex<TabManager>>, index: &mut usize, force: bool) {
-        if let (Ok(mut interface), Ok(mut tabs)) = (interface.lock(), tabs.lock()) {
-            if interface.logset.len() > 0 {
-                // update logs
-                // TODO handle errors better!
-                let log = &mut interface.logset.logs[*index];
+    pub async fn update_logs(interface: &mut Interface, tabs: &mut TabManager, force: bool) {
+        for (index, log) in &mut interface.logset.logs.iter_mut().enumerate() {
+            // update logs
+            // TODO handle errors better!
 
-                let res = if force {
-                    log.force_update(&mut vec![&mut tabs.state[*index]])
-                } else {
-                    log.update(&mut vec![&mut tabs.state[*index]])
-                };
-                match res {
-                    Ok(_) => {},
-                    Err(err) => { tabs.state[*index].slices.insert("Error".into(), format!("{}", err)); }
-                }
-
-                *index += 1;
-                if *index >= interface.logset.len() {
-                    *index = 0;
-                }
+            let res = if force {
+                log.force_update(&mut vec![&mut tabs.state[index]]).await
+            } else {
+                log.update(&mut vec![&mut tabs.state[index]]).await
+            };
+            match res {
+                Ok(_) => {},
+                Err(err) => { tabs.state[index].slices.insert("Error".into(), format!("{}", err)); }
             }
-        }
-
-        if !force {
-            thread::sleep(time::Duration::from_millis(500));
         }
     }
 
-    pub fn init(&mut self) -> BoxResult<()> {
-        let interface = self.interface.clone();
-        let tabs = self.tabs.clone();
+    pub async fn init(&mut self) -> BoxResult<()> {
+        Self::update_logs(&mut self.interface, &mut self.tabs, true).await;
 
-        self.update_handle = Some(thread::spawn(move || {
-            // spawn a thread that keeps going forever
-            loop {
-                let mut index = 0;
-                // TODO this migth deadlock!
-                loop {
-                    Self::update_logs(&interface, &tabs, &mut index, true);
-                    if index == 0 {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            let mut index = 0;
-            // do forever
-            loop {
-                Self::update_logs(&interface, &tabs, &mut index, false);
-            }
-        }));
         Ok(())
     }
 
-    pub fn update(&mut self) -> BoxResult<bool> {
+    pub async fn update(&mut self) -> BoxResult<bool> {
+        // do forever
+        Self::update_logs(&mut self.interface, &mut self.tabs, false).await;
+
         self.render()?;
-
-        let tabs = self.tabs.clone();
-
-        if let Ok(mut tabs) = tabs.lock() {
-            if let Event::Input(input) = self.events.next()? {
-                match input {
-                    Key::Char('q') => {
-                        return Ok(true);
-                    },
-                    Key::Right => tabs.next(),
-                    Key::Left => tabs.prev(),
-                    Key::Up => tabs.down(),
-                    Key::Down => tabs.up(),
-                    Key::PageUp => tabs.next_offset(),
-                    Key::PageDown => tabs.prev_offset(),
-                    _ => {}
-                }
+        if let Event::Input(input) = self.events.next()? {
+            match input {
+                Key::Char('q') => {
+                    return Ok(true);
+                },
+                Key::Right => self.tabs.next(),
+                Key::Left => self.tabs.prev(),
+                Key::Up => self.tabs.down(),
+                Key::Down => self.tabs.up(),
+                Key::PageUp => self.tabs.next_offset(),
+                Key::PageDown => self.tabs.prev_offset(),
+                _ => {}
             }
         }
-
-        thread::sleep(Duration::from_millis(10));
 
         return Ok(false);
     }
@@ -219,34 +177,32 @@ where B: Backend {
     }
 
     pub fn render(&mut self) -> BoxResult<()> {
-        let tab_manager = self.tabs.clone();
+        let tab_manager = &mut self.tabs;
 
-        if let Ok(tab_manager) = tab_manager.lock() {
-            self.terminal.draw(|mut f| {
-                let size = f.size();
+        self.terminal.draw(|mut f| {
+            let size = f.size();
 
-                let chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    .margin(0)
-                    .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)].as_ref())
-                    .split(size);
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .margin(0)
+                .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)].as_ref())
+                .split(size);
 
-                // outside border
-                let block = Block::default()
-                    .borders(Borders::NONE);
-                f.render_widget(block, size);
+            // outside border
+            let block = Block::default()
+                .borders(Borders::NONE);
+            f.render_widget(block, size);
 
-                Self::render_tabs(&mut f, &tab_manager, &chunks[0]);
+            Self::render_tabs(&mut f, &tab_manager, &chunks[0]);
 
-                if tab_manager.state.len() == 0 {
-                    Self::render_no_logs(&mut f, &tab_manager, &chunks[1]);
-                } else {
-                    Self::render_content(&mut f, &tab_manager, &chunks[1]);
-                    // render info about matches
-                    Self::render_info(&mut f, &tab_manager, &chunks[2]);
-                }
-            })?;
-        }
+            if tab_manager.state.len() == 0 {
+                Self::render_no_logs(&mut f, &tab_manager, &chunks[1]);
+            } else {
+                Self::render_content(&mut f, &tab_manager, &chunks[1]);
+                // render info about matches
+                Self::render_info(&mut f, &tab_manager, &chunks[2]);
+            }
+        })?;
         Ok(())
     }
 }

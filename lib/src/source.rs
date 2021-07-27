@@ -1,3 +1,6 @@
+
+
+use super::async_trait::async_trait;
 use super::error::{BoxResult, InMemoryDataError};
 use super::serde::{Serialize, Deserialize};
 use super::typetag;
@@ -17,13 +20,14 @@ pub enum DataSourceTypes {
 }
 
 #[typetag::serde]
+#[async_trait]
 impl DataSource for DataSourceTypes {
-    fn load(&mut self) -> BoxResult<String> {
+    async fn load(&mut self) -> BoxResult<String> {
         match self {
-            Self::InMemory(s) => s.load(),
-            Self::File(s) => s.load(),
-            Self::Http(s) => s.load(),
-            Self::Generic(s) => s.load()
+            Self::InMemory(s) => s.load().await,
+            Self::File(s) => s.load().await,
+            Self::Http(s) => s.load().await,
+            Self::Generic(s) => s.load().await
         }
     }
 }
@@ -43,8 +47,9 @@ where T: 'static + DataSource + Clone {
 /// from a location e.g. local file system,
 /// ssh or http
 #[typetag::serde(tag = "type")]
+#[async_trait]
 pub trait DataSource: DataSourceClone + Send {
-    fn load(&mut self) -> BoxResult<String>;
+    async fn load(&mut self) -> BoxResult<String>;
 }
 
 impl Clone for Box<dyn DataSource> {
@@ -72,8 +77,9 @@ impl InMemoryDataSource {
 }
 
 #[typetag::serde]
+#[async_trait]
 impl DataSource for InMemoryDataSource {
-    fn load(&mut self) -> BoxResult<String> {
+    async fn load(&mut self) -> BoxResult<String> {
         match self.data.pop() {
             Some(s) => Ok(s),
             _ => Err(Box::new(InMemoryDataError))
@@ -183,8 +189,9 @@ impl FileDataSource {
 
 
 #[typetag::serde]
+#[async_trait]
 impl DataSource for FileDataSource {
-    fn load(&mut self) -> BoxResult<String> {
+    async fn load(&mut self) -> BoxResult<String> {
         let file = File::open(Path::new(&self.path))?;
         let mut rev_reader = TailReader::new(file,self.line_limit);
 
@@ -210,9 +217,10 @@ impl HttpDataSource {
 }
 
 #[typetag::serde]
+#[async_trait]
 impl DataSource for HttpDataSource {
-    fn load(&mut self) -> BoxResult<String> {
-        Ok(reqwest::blocking::get(&self.url)?.text()?)
+    async fn load(&mut self) -> BoxResult<String> {
+        Ok(reqwest::get(&self.url).await?.text().await?)
     }
 }
 

@@ -2,6 +2,7 @@ pub mod event;
 mod app;
 mod tab;
 
+extern crate tokio;
 extern crate termion;
 extern crate tui;
 extern crate minutecat;
@@ -16,7 +17,8 @@ use tui::{
 };
 use minutecat::interface::command_line;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     let interface = command_line()?;
     // Terminal initialization
     let stdout = io::stdout().into_raw_mode()?;
@@ -28,8 +30,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut app = App::new(interface, terminal);
 
-    app.init()?;
-    while !app.update()? {
+    app.init().await?;
+    while !app.update().await? {
     }
 
     // always save in the end!
