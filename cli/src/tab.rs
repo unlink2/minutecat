@@ -106,7 +106,7 @@ impl EventHandler for TabState {
         if event.did_trigger || self.name == "" {
             self.text = event.text.into();
             self.name = event.name.into();
-            self.next_time = event.task.next_time();
         }
+        self.next_time = event.task.next_time();
     }
 }
