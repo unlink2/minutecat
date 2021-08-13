@@ -1,12 +1,12 @@
-use super::serde::{Serialize, Deserialize};
-use super::logfile::{Logfile, EventHandler};
 use super::error::BoxResult;
+use super::logfile::{EventHandler, Logfile};
+use super::serde::{Deserialize, Serialize};
 use super::serde_yaml;
 use std::fs::File;
-use std::io::Write;
 use std::io::Read;
-use std::str;
+use std::io::Write;
 use std::path::Path;
+use std::str;
 
 /// A logset is the logfile manager
 /// please note that logset may call blocking IO
@@ -15,20 +15,18 @@ use std::path::Path;
 /// TODO There may be an async option in the future
 #[derive(Default, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct LogSet {
-    pub logs: Vec<Logfile>
+    pub logs: Vec<Logfile>,
 }
 
 impl LogSet {
     pub fn new() -> Self {
-        Self {
-            logs: vec![]
-        }
+        Self { logs: vec![] }
     }
 
     pub fn from_path(path: &str) -> BoxResult<Self> {
         match File::open(Path::new(&path)) {
             Ok(mut file) => Self::from_reader(&mut file),
-            Err(_err) => Ok(Self::new())
+            Err(_err) => Ok(Self::new()),
         }
     }
 

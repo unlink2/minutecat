@@ -1,14 +1,14 @@
-use super::serde::{Serialize, Deserialize};
-use super::typetag;
-use super::error::{FromStringError, BoxResult};
+use super::error::{BoxResult, FromStringError};
 use super::regex::Regex;
+use super::serde::{Deserialize, Serialize};
+use super::typetag;
 use std::fmt;
 use std::str::FromStr;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum TriggerTypes {
     Regex(RegexTrigger),
-    Generic(Box<dyn Trigger>)
+    Generic(Box<dyn Trigger>),
 }
 
 #[typetag::serde]
@@ -16,21 +16,21 @@ impl Trigger for TriggerTypes {
     fn name(&self) -> &str {
         match self {
             Self::Regex(t) => t.name(),
-            Self::Generic(t) => t.name()
+            Self::Generic(t) => t.name(),
         }
     }
 
     fn description(&self) -> &str {
         match self {
             Self::Regex(t) => t.description(),
-            Self::Generic(t) => t.description()
+            Self::Generic(t) => t.description(),
         }
     }
 
     fn check(&self, text: &str) -> BoxResult<bool> {
         match self {
             Self::Regex(t) => t.check(text),
-            Self::Generic(t) => t.check(text)
+            Self::Generic(t) => t.check(text),
         }
     }
 
@@ -38,14 +38,14 @@ impl Trigger for TriggerTypes {
     fn slice<'a>(&self, text: &'a str) -> BoxResult<&'a str> {
         match self {
             Self::Regex(t) => t.slice(text),
-            Self::Generic(t) => t.slice(text)
+            Self::Generic(t) => t.slice(text),
         }
     }
 
     fn get_type(&self) -> TriggerType {
         match self {
             Self::Regex(t) => t.get_type(),
-            Self::Generic(t) => t.get_type()
+            Self::Generic(t) => t.get_type(),
         }
     }
 }
@@ -55,7 +55,9 @@ pub trait TriggerClone {
 }
 
 impl<T> TriggerClone for T
-where T: 'static + Trigger + Clone {
+where
+    T: 'static + Trigger + Clone,
+{
     fn box_clone(&self) -> Box<dyn Trigger> {
         Box::new(self.clone())
     }
@@ -69,7 +71,7 @@ pub enum TriggerType {
     NoEvent,
     Success,
     Warning,
-    Error
+    Error,
 }
 
 impl fmt::Display for TriggerType {
@@ -85,7 +87,7 @@ impl FromStr for TriggerType {
             "success" => Ok(Self::Success),
             "warning" => Ok(Self::Warning),
             "error" => Ok(Self::Error),
-            _ => Err(FromStringError)
+            _ => Err(FromStringError),
         }
     }
 }
@@ -118,17 +120,23 @@ pub struct RegexTrigger {
     re: String,
 
     #[serde(default)]
-    invert: bool
+    invert: bool,
 }
 
 impl RegexTrigger {
-    pub fn new(name: &str, description: &str, trigger_type: TriggerType, re: &str, invert: bool) -> Self {
+    pub fn new(
+        name: &str,
+        description: &str,
+        trigger_type: TriggerType,
+        re: &str,
+        invert: bool,
+    ) -> Self {
         Self {
             name: name.into(),
             description: description.into(),
             trigger_type,
             re: re.into(),
-            invert
+            invert,
         }
     }
 }
@@ -152,7 +160,7 @@ impl Trigger for RegexTrigger {
         let re = Regex::new(&self.re)?;
         match re.find(text) {
             Some(ma) => Ok(&text[ma.start()..ma.end()]),
-            _ => Ok(&text[0..0])
+            _ => Ok(&text[0..0]),
         }
     }
 

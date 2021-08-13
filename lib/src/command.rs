@@ -1,9 +1,9 @@
-use super::logset::LogSet;
-use super::logfile::Logfile;
-use super::source::{DataSourceTypes, HttpDataSource, FileDataSource};
-use super::task::{Task, ClockTimeSource, TimeSourceTypes};
 use super::error::{BoxResult, FromStringError};
-use super::trigger::{TriggerTypes, RegexTrigger, TriggerType};
+use super::logfile::Logfile;
+use super::logset::LogSet;
+use super::source::{DataSourceTypes, FileDataSource, HttpDataSource};
+use super::task::{ClockTimeSource, Task, TimeSourceTypes};
+use super::trigger::{RegexTrigger, TriggerType, TriggerTypes};
 use std::fmt;
 use std::str::FromStr;
 /// a command is an action that modifies a struct
@@ -28,7 +28,7 @@ pub trait Command<T> {
 #[derive(Debug)]
 pub enum FileType {
     Http,
-    Local
+    Local,
 }
 
 impl fmt::Display for FileType {
@@ -43,11 +43,10 @@ impl FromStr for FileType {
         match s {
             "local" => Ok(Self::Local),
             "http" => Ok(Self::Http),
-            _ => Err(FromStringError)
+            _ => Err(FromStringError),
         }
     }
 }
-
 
 pub struct AddFileCommand {
     pub name: String,
@@ -55,22 +54,24 @@ pub struct AddFileCommand {
     pub line_limit: usize,
     pub refresh_time: String,
     pub file_type: FileType,
-    pub can_undo: bool
+    pub can_undo: bool,
 }
 
 impl AddFileCommand {
-    pub fn new(name: &str,
+    pub fn new(
+        name: &str,
         location: &str,
         line_limit: usize,
         refresh_time: &str,
-        file_type: FileType) -> Self {
+        file_type: FileType,
+    ) -> Self {
         Self {
             name: name.into(),
             location: location.into(),
             line_limit,
             refresh_time: refresh_time.into(),
             can_undo: false,
-            file_type
+            file_type,
         }
     }
 }
@@ -78,12 +79,20 @@ impl AddFileCommand {
 impl Command<LogSet> for AddFileCommand {
     fn execute(&mut self, logset: &mut LogSet) -> BoxResult<()> {
         let ds = match self.file_type {
-            FileType::Local => DataSourceTypes::File(FileDataSource::new(&self.location, self.line_limit)),
-            FileType::Http => DataSourceTypes::Http(HttpDataSource::new(&self.location))
+            FileType::Local => {
+                DataSourceTypes::File(FileDataSource::new(&self.location, self.line_limit))
+            }
+            FileType::Http => DataSourceTypes::Http(HttpDataSource::new(&self.location)),
         };
-        logset.logs.push(Logfile::new(&self.name, ds,
-                Task::from_str(true, &self.refresh_time, TimeSourceTypes::Clock(ClockTimeSource))?
-            ));
+        logset.logs.push(Logfile::new(
+            &self.name,
+            ds,
+            Task::from_str(
+                true,
+                &self.refresh_time,
+                TimeSourceTypes::Clock(ClockTimeSource),
+            )?,
+        ));
         self.can_undo = true;
         Ok(())
     }
@@ -99,14 +108,14 @@ impl Command<LogSet> for AddFileCommand {
 
 pub struct DeleteLogfileCommand {
     pub index: usize,
-    pub removed: Option<Logfile>
+    pub removed: Option<Logfile>,
 }
 
 impl DeleteLogfileCommand {
     pub fn new(index: usize) -> Self {
         Self {
             index,
-            removed: None
+            removed: None,
         }
     }
 }
@@ -135,7 +144,7 @@ pub struct AddRegexTriggerCommand {
     trigger_type: TriggerType,
     regex: String,
     invert: bool,
-    can_undo: bool
+    can_undo: bool,
 }
 
 impl AddRegexTriggerCommand {
@@ -144,14 +153,15 @@ impl AddRegexTriggerCommand {
         desc: &str,
         trigger_type: TriggerType,
         regex: &str,
-        invert: bool) -> Self {
+        invert: bool,
+    ) -> Self {
         Self {
             name: name.into(),
             desc: desc.into(),
             trigger_type,
             regex: regex.into(),
             invert,
-            can_undo: false
+            can_undo: false,
         }
     }
 }
@@ -159,11 +169,12 @@ impl AddRegexTriggerCommand {
 impl Command<Logfile> for AddRegexTriggerCommand {
     fn execute(&mut self, log: &mut Logfile) -> BoxResult<()> {
         log.push(TriggerTypes::Regex(RegexTrigger::new(
-                    &self.name,
-                    &self.desc,
-                    self.trigger_type,
-                    &self.regex,
-                    self.invert)));
+            &self.name,
+            &self.desc,
+            self.trigger_type,
+            &self.regex,
+            self.invert,
+        )));
         self.can_undo = true;
         Ok(())
     }
@@ -179,14 +190,14 @@ impl Command<Logfile> for AddRegexTriggerCommand {
 
 pub struct RemoveTriggerCommand {
     index: usize,
-    removed: Option<TriggerTypes>
+    removed: Option<TriggerTypes>,
 }
 
 impl RemoveTriggerCommand {
     pub fn new(index: usize) -> Self {
         Self {
             index,
-            removed: None
+            removed: None,
         }
     }
 }
@@ -262,9 +273,11 @@ mod tests {
 
     #[test]
     fn it_should_add_re_trigger() {
-        let mut l = Logfile::new("name",
+        let mut l = Logfile::new(
+            "name",
             DataSourceTypes::InMemory(InMemoryDataSource::new(vec![])),
-            Task::new(false, 0, TimeSourceTypes::Clock(ClockTimeSource)));
+            Task::new(false, 0, TimeSourceTypes::Clock(ClockTimeSource)),
+        );
 
         let mut cmd = AddRegexTriggerCommand::new("name", "desc", TriggerType::NoEvent, "", false);
         cmd.execute(&mut l).unwrap();
@@ -277,9 +290,11 @@ mod tests {
 
     #[test]
     fn it_should_remove_re_trigger() {
-        let mut l = Logfile::new("name",
+        let mut l = Logfile::new(
+            "name",
             DataSourceTypes::InMemory(InMemoryDataSource::new(vec![])),
-            Task::new(false, 0, TimeSourceTypes::Clock(ClockTimeSource)));
+            Task::new(false, 0, TimeSourceTypes::Clock(ClockTimeSource)),
+        );
 
         let mut cmd = AddRegexTriggerCommand::new("name", "desc", TriggerType::NoEvent, "", false);
         let mut delcmd = RemoveTriggerCommand::new(0);

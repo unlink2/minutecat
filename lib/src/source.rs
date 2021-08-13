@@ -1,14 +1,12 @@
-
-
 use super::async_trait::async_trait;
 use super::error::{BoxResult, InMemoryDataError};
-use super::serde::{Serialize, Deserialize};
+use super::serde::{Deserialize, Serialize};
 use super::typetag;
 use std::fs::File;
-use std::io::Read;
-use std::path::Path;
 use std::io::prelude::*;
+use std::io::Read;
 use std::io::SeekFrom;
+use std::path::Path;
 use std::str;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -16,7 +14,7 @@ pub enum DataSourceTypes {
     InMemory(InMemoryDataSource),
     File(FileDataSource),
     Http(HttpDataSource),
-    Generic(Box<dyn DataSource>)
+    Generic(Box<dyn DataSource>),
 }
 
 #[typetag::serde]
@@ -27,7 +25,7 @@ impl DataSource for DataSourceTypes {
             Self::InMemory(s) => s.load().await,
             Self::File(s) => s.load().await,
             Self::Http(s) => s.load().await,
-            Self::Generic(s) => s.load().await
+            Self::Generic(s) => s.load().await,
         }
     }
 }
@@ -37,7 +35,9 @@ pub trait DataSourceClone {
 }
 
 impl<T> DataSourceClone for T
-where T: 'static + DataSource + Clone {
+where
+    T: 'static + DataSource + Clone,
+{
     fn box_clone(&self) -> Box<dyn DataSource> {
         Box::new(self.clone())
     }
@@ -65,14 +65,12 @@ impl Clone for Box<dyn DataSource> {
 /// to logfile structs
 #[derive(Clone, Serialize, Deserialize)]
 pub struct InMemoryDataSource {
-    data: Vec<String>
+    data: Vec<String>,
 }
 
 impl InMemoryDataSource {
     pub fn new(data: Vec<String>) -> Self {
-        Self {
-            data
-        }
+        Self { data }
     }
 }
 
@@ -82,7 +80,7 @@ impl DataSource for InMemoryDataSource {
     async fn load(&mut self) -> BoxResult<String> {
         match self.data.pop() {
             Some(s) => Ok(s),
-            _ => Err(Box::new(InMemoryDataError))
+            _ => Err(Box::new(InMemoryDataError)),
         }
     }
 }
@@ -95,19 +93,23 @@ impl DataSource for InMemoryDataSource {
  * Takes an input buffer and reads the bottom n lines backwards
  */
 pub struct TailReader<T>
-where T: Read + Seek {
+where
+    T: Read + Seek,
+{
     input: T,
     line_limit: usize,
-    chunk_size: u64
+    chunk_size: u64,
 }
 
 impl<T> TailReader<T>
-where T: Read + Seek {
+where
+    T: Read + Seek,
+{
     pub fn new(input: T, line_limit: usize) -> Self {
         Self {
             input,
             line_limit,
-            chunk_size: 64
+            chunk_size: 64,
         }
     }
 
@@ -161,10 +163,8 @@ where T: Read + Seek {
         // count new lines and trim
         while self.count_lines(slice) >= self.line_limit {
             match self.trim(slice) {
-                Some(pos) => {
-                    slice = &slice[pos+1..]
-                },
-                _ => break // out of lines
+                Some(pos) => slice = &slice[pos + 1..],
+                _ => break, // out of lines
             }
         }
 
@@ -175,44 +175,40 @@ where T: Read + Seek {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FileDataSource {
     line_limit: usize,
-    path: String
+    path: String,
 }
 
 impl FileDataSource {
     pub fn new(path: &str, line_limit: usize) -> Self {
         Self {
             path: path.into(),
-            line_limit
+            line_limit,
         }
     }
 }
-
 
 #[typetag::serde]
 #[async_trait]
 impl DataSource for FileDataSource {
     async fn load(&mut self) -> BoxResult<String> {
         let file = File::open(Path::new(&self.path))?;
-        let mut rev_reader = TailReader::new(file,self.line_limit);
+        let mut rev_reader = TailReader::new(file, self.line_limit);
 
         return Ok(rev_reader.read_lines()?);
     }
 }
-
 
 /**
  * Http data input
  */
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HttpDataSource {
-    url: String
+    url: String,
 }
 
 impl HttpDataSource {
     pub fn new(url: &str) -> Self {
-        Self {
-            url: url.into()
-        }
+        Self { url: url.into() }
     }
 }
 
@@ -233,7 +229,8 @@ mod tests {
 
     #[test]
     fn it_should_read_files_in_reverse_up_to_limit() {
-        let mut rev_reader = TailReader::new(Cursor::new("Data\nWith\nNew\nLines\nFor\nUnit\nTests"), 3);
+        let mut rev_reader =
+            TailReader::new(Cursor::new("Data\nWith\nNew\nLines\nFor\nUnit\nTests"), 3);
         rev_reader.chunk_size = 4; // for testing we lower chunk size
 
         let lines = rev_reader.read_lines().unwrap();
@@ -257,4 +254,3 @@ mod tests {
         assert_eq!(lines, "Data\nWith\nNew\nLines");
     }
 }
-

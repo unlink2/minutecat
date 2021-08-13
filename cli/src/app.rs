@@ -1,39 +1,42 @@
-use super::tab::TabManager;
-use super::event::{Events, Event};
-use super::minutecat::interface::Interface;
+use super::event::{Event, Events};
 use super::minutecat::error::BoxResult;
+use super::minutecat::interface::Interface;
 use super::minutecat::trigger::TriggerType;
+use super::tab::TabManager;
+use chrono::prelude::DateTime;
+use chrono::Local;
+use std::time::{Duration, UNIX_EPOCH};
 use termion::event::Key;
 use tui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout, Alignment, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
     widgets::{Block, Borders, Paragraph, Tabs, Wrap},
-    Terminal,
-    Frame
+    Frame, Terminal,
 };
-use chrono::prelude::DateTime;
-use chrono::Local;
-use std::time::{UNIX_EPOCH, Duration};
 
 pub struct App<B>
-where B: Backend {
+where
+    B: Backend,
+{
     pub tabs: TabManager,
     pub interface: Interface,
     // this thread runs updates
     terminal: Terminal<B>,
-    events: Events
+    events: Events,
 }
 
 impl<B> App<B>
-where B: Backend {
+where
+    B: Backend,
+{
     pub fn new(interface: Interface, terminal: Terminal<B>) -> Self {
         Self {
             tabs: TabManager::new(interface.logset.len()),
             interface,
             terminal,
-            events: Events::new()
+            events: Events::new(),
         }
     }
 
@@ -48,8 +51,12 @@ where B: Backend {
                 log.update(&mut vec![&mut tabs.state[index]]).await
             };
             match res {
-                Ok(_) => {},
-                Err(err) => { tabs.state[index].slices.insert("Error".into(), format!("{}", err)); }
+                Ok(_) => {}
+                Err(err) => {
+                    tabs.state[index]
+                        .slices
+                        .insert("Error".into(), format!("{}", err));
+                }
             }
         }
     }
@@ -69,7 +76,7 @@ where B: Backend {
             match input {
                 Key::Char('q') => {
                     return Ok(true);
-                },
+                }
                 Key::Right => self.tabs.next(),
                 Key::Left => self.tabs.prev(),
                 Key::Up => self.tabs.down(),
@@ -89,38 +96,38 @@ where B: Backend {
             .iter()
             .enumerate()
             .map(|(i, t)| {
-                let tab = &tab_manager.state[tab_manager.tab_offset+i];
+                let tab = &tab_manager.state[tab_manager.tab_offset + i];
 
                 let color = match tab.trigger_type {
                     TriggerType::Success => Color::Green,
                     TriggerType::Warning => Color::Yellow,
                     TriggerType::Error => Color::Red,
-                    _ => Color::White
+                    _ => Color::White,
                 };
-                Spans::from(vec![
-                    Span::styled(&t.name, Style::default().fg(color)),
-                ])
+                Spans::from(vec![Span::styled(&t.name, Style::default().fg(color))])
             })
-        .collect();
+            .collect();
 
         // render tabs
         let tabs = Tabs::new(titles)
-            .block(Block::default().borders(Borders::ALL).title(
-                    format!("Tabs {}/{}", tab_manager.index+1, tab_manager.max)))
+            .block(Block::default().borders(Borders::ALL).title(format!(
+                "Tabs {}/{}",
+                tab_manager.index + 1,
+                tab_manager.max
+            )))
             .select(tab_manager.index)
             .style(Style::default().fg(Color::Cyan))
             .highlight_style(
                 Style::default()
-                .add_modifier(Modifier::BOLD)
-                .bg(Color::Black),
+                    .add_modifier(Modifier::BOLD)
+                    .bg(Color::Black),
             );
         f.render_widget(tabs, *chunk);
     }
 
     pub fn render_no_logs(f: &mut Frame<B>, tab_manager: &TabManager, chunk: &Rect) {
         let content = Paragraph::new("No Logs")
-            .block(Block::default().borders(Borders::ALL).title(
-                    "No Logs"))
+            .block(Block::default().borders(Borders::ALL).title("No Logs"))
             .wrap(Wrap { trim: true })
             .alignment(Alignment::Left)
             .scroll(tab_manager.scroll);
@@ -135,8 +142,11 @@ where B: Backend {
 
         // render content
         let content = Paragraph::new(log.text.clone())
-            .block(Block::default().borders(Borders::ALL).title(
-                    format!("{} Next: {}", log.name.clone(), datetime.format("%Y-%m-%d %H:%M:%S"))))
+            .block(Block::default().borders(Borders::ALL).title(format!(
+                "{} Next: {}",
+                log.name.clone(),
+                datetime.format("%Y-%m-%d %H:%M:%S")
+            )))
             .wrap(Wrap { trim: true })
             .alignment(Alignment::Left)
             .scroll(tab_manager.scroll);
@@ -147,7 +157,8 @@ where B: Backend {
         // get slices
         let tab = &tab_manager.state[tab_manager.index];
 
-        let titles: Vec<Spans> = tab.slices
+        let titles: Vec<Spans> = tab
+            .slices
             .iter()
             .enumerate()
             .map(|(_i, t)| {
@@ -155,23 +166,28 @@ where B: Backend {
                     TriggerType::Success => Color::Green,
                     TriggerType::Warning => Color::Yellow,
                     TriggerType::Error => Color::Red,
-                    _ => Color::White
+                    _ => Color::White,
                 };
-                Spans::from(vec![
-                    Span::styled(format!("{}={}", t.0, t.1), Style::default().fg(color)),
-                ])
+                Spans::from(vec![Span::styled(
+                    format!("{}={}", t.0, t.1),
+                    Style::default().fg(color),
+                )])
             })
-        .collect();
+            .collect();
 
         // render tabs
         let tabs = Tabs::new(titles)
-            .block(Block::default().borders(Borders::ALL).title(format!("Info ({})", tab.slices.len())))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(format!("Info ({})", tab.slices.len())),
+            )
             .select(tab_manager.index)
             .style(Style::default().fg(Color::Cyan))
             .highlight_style(
                 Style::default()
-                .add_modifier(Modifier::BOLD)
-                .bg(Color::Black),
+                    .add_modifier(Modifier::BOLD)
+                    .bg(Color::Black),
             );
         f.render_widget(tabs, *chunk);
     }
@@ -185,12 +201,18 @@ where B: Backend {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .margin(0)
-                .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)].as_ref())
+                .constraints(
+                    [
+                        Constraint::Length(3),
+                        Constraint::Min(0),
+                        Constraint::Length(3),
+                    ]
+                    .as_ref(),
+                )
                 .split(size);
 
             // outside border
-            let block = Block::default()
-                .borders(Borders::NONE);
+            let block = Block::default().borders(Borders::NONE);
             f.render_widget(block, size);
 
             Self::render_tabs(&mut f, &tab_manager, &chunks[0]);
@@ -206,4 +228,3 @@ where B: Backend {
         Ok(())
     }
 }
-

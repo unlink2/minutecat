@@ -1,8 +1,8 @@
-use super::serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 use super::error::BoxResult;
 use super::error::UndefinedExtraData;
+use super::serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+use std::collections::HashMap;
 
 /// TODO this is a rather inefficient way
 /// to store extra data
@@ -10,18 +10,25 @@ use serde::de::DeserializeOwned;
 /// Maybe implement a proper system in the future?
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct ExtraData {
-    data: HashMap<String, String>
+    data: HashMap<String, String>,
 }
 
 impl ExtraData {
     pub fn new() -> Self {
         Self {
-            data: HashMap::new()
+            data: HashMap::new(),
         }
     }
 
-    pub fn put<T>(&mut self, name: &str, data: &T, serialize: fn(&T) -> BoxResult<String>) -> BoxResult<()>
-    where T: Serialize {
+    pub fn put<T>(
+        &mut self,
+        name: &str,
+        data: &T,
+        serialize: fn(&T) -> BoxResult<String>,
+    ) -> BoxResult<()>
+    where
+        T: Serialize,
+    {
         self.data.insert(name.into(), serialize(data)?);
         Ok(())
     }
@@ -29,19 +36,23 @@ impl ExtraData {
     pub fn get<T>(&mut self, name: &str, deserialize: fn(&str) -> BoxResult<T>) -> BoxResult<T> {
         let data = match self.data.get(name) {
             Some(d) => d,
-            _ => return Err(Box::new(UndefinedExtraData))
+            _ => return Err(Box::new(UndefinedExtraData)),
         };
 
         Ok(deserialize(&data)?)
     }
 
     pub fn serialize<T>(data: &T) -> BoxResult<String>
-    where T: Serialize {
+    where
+        T: Serialize,
+    {
         Ok(serde_yaml::to_string(&data)?)
     }
 
     pub fn deserialize<T>(s: &str) -> BoxResult<T>
-    where T:  DeserializeOwned {
+    where
+        T: DeserializeOwned,
+    {
         Ok(serde_yaml::from_str(s)?)
     }
 }
@@ -53,19 +64,23 @@ mod tests {
     #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
     struct TestData {
         value1: u32,
-        value2: u32
+        value2: u32,
     }
-
 
     #[test]
     fn it_should_serialize_and_deserialize_test_data() {
-        let test = TestData {value1: 100, value2: 200};
+        let test = TestData {
+            value1: 100,
+            value2: 200,
+        };
 
         let mut extra = ExtraData::new();
 
         extra.put("Test", &test, ExtraData::serialize).unwrap();
 
-        let deser = extra.get::<TestData>("Test", ExtraData::deserialize).unwrap();
+        let deser = extra
+            .get::<TestData>("Test", ExtraData::deserialize)
+            .unwrap();
 
         assert_eq!(deser, test);
     }
@@ -82,7 +97,10 @@ mod tests {
     #[test]
     #[should_panic]
     fn it_should_not_cast_to_bad_type() {
-        let test = TestData {value1: 100, value2: 200};
+        let test = TestData {
+            value1: 100,
+            value2: 200,
+        };
 
         let mut extra = ExtraData::new();
 

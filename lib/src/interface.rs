@@ -1,12 +1,12 @@
-use super::logset::LogSet;
-use super::trigger::{Trigger, TriggerType};
-use std::path::PathBuf;
-use std::str::FromStr;
+use super::clap::{AppSettings, Clap};
+use super::command::*;
 use super::dirs;
 use super::error::BoxResult;
-use super::clap::{AppSettings, Clap};
+use super::logset::LogSet;
+use super::trigger::{Trigger, TriggerType};
 use std::env;
-use super::command::*;
+use std::path::PathBuf;
+use std::str::FromStr;
 
 /**
  * This file descibes a general purpse command line interface
@@ -22,7 +22,7 @@ use super::command::*;
 pub struct Interface {
     pub logset: LogSet,
     pub options: Opts,
-    pub cfg_path: String
+    pub cfg_path: String,
 }
 
 #[derive(Clap)]
@@ -30,8 +30,8 @@ pub struct Interface {
 #[clap(setting = AppSettings::ColoredHelp)]
 pub struct Opts {
     #[clap(subcommand)]
-    subcmd: Option<SubCommand>
- }
+    subcmd: Option<SubCommand>,
+}
 
 #[derive(Clap)]
 pub enum SubCommand {
@@ -51,7 +51,7 @@ pub enum SubCommand {
     ListTrigger(ListTrigger),
 
     #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
-    DeleteTrigger(DeleteTrigger)
+    DeleteTrigger(DeleteTrigger),
 }
 
 #[derive(Clap)]
@@ -60,7 +60,7 @@ pub struct Add {
     location: String,
     line_limit: usize,
     logtype: FileType,
-    refresh_time: String
+    refresh_time: String,
 }
 
 #[derive(Clap)]
@@ -68,7 +68,7 @@ pub struct List;
 
 #[derive(Clap)]
 pub struct Delete {
-    pub index: usize
+    pub index: usize,
 }
 
 #[derive(Clap)]
@@ -79,27 +79,28 @@ pub struct AddReTrigger {
     pub trigger_type: TriggerType,
     pub regex: String,
     #[clap(long)]
-    pub invert: bool
+    pub invert: bool,
 }
 
 #[derive(Clap)]
 pub struct ListTrigger {
-    pub index: usize
+    pub index: usize,
 }
 
 #[derive(Clap)]
 pub struct DeleteTrigger {
     pub log_index: usize,
-    pub trigger_index: usize
+    pub trigger_index: usize,
 }
 
 // TODO allow user to move config path?
 pub fn config_path() -> PathBuf {
-    let default = dirs::home_dir().expect("Unable to get home directory!")
-            .join(".config/minutecat");
+    let default = dirs::home_dir()
+        .expect("Unable to get home directory!")
+        .join(".config/minutecat");
     match env::var("MINUTECATDIR") {
         Ok(path) => PathBuf::from_str(&path).unwrap_or(default),
-        Err(_e) => default
+        Err(_e) => default,
     }
 }
 
@@ -110,8 +111,8 @@ fn init_cfg_dir() -> std::io::Result<()> {
 pub fn init_logset() -> BoxResult<(LogSet, String)> {
     let cfg_dir = config_path().join("config.yaml");
     let cfg_path = cfg_dir
-            .to_str()
-            .expect("could not find configuration directory!");
+        .to_str()
+        .expect("could not find configuration directory!");
 
     init_cfg_dir()?;
     let logset = LogSet::from_path(cfg_path)?;
@@ -124,17 +125,15 @@ pub fn command_line() -> BoxResult<Interface> {
     let (mut logset, cfg_path) = init_logset()?;
 
     let exit = match &options.subcmd {
-        Some(subcmd) => {
-            match &subcmd {
-                SubCommand::Add(add) => add_cmd(&add, &mut logset)?,
-                SubCommand::List(list) => list_cmd(&list, &mut logset)?,
-                SubCommand::Delete(delete) => delete_cmd(&delete, &mut logset)?,
-                SubCommand::AddReTrigger(re) => add_re_trigger(&re, &mut logset)?,
-                SubCommand::ListTrigger(lt) => list_trigger(&lt, &mut logset)?,
-                SubCommand::DeleteTrigger(dt) => delete_trigger(&dt, &mut logset)?
-            }
+        Some(subcmd) => match &subcmd {
+            SubCommand::Add(add) => add_cmd(&add, &mut logset)?,
+            SubCommand::List(list) => list_cmd(&list, &mut logset)?,
+            SubCommand::Delete(delete) => delete_cmd(&delete, &mut logset)?,
+            SubCommand::AddReTrigger(re) => add_re_trigger(&re, &mut logset)?,
+            SubCommand::ListTrigger(lt) => list_trigger(&lt, &mut logset)?,
+            SubCommand::DeleteTrigger(dt) => delete_trigger(&dt, &mut logset)?,
         },
-        _ => false
+        _ => false,
     };
 
     logset.to_file(&cfg_path)?;
@@ -145,7 +144,7 @@ pub fn command_line() -> BoxResult<Interface> {
     Ok(Interface {
         logset,
         options,
-        cfg_path: cfg_path.into()
+        cfg_path: cfg_path.into(),
     })
 }
 
@@ -157,16 +156,18 @@ pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<bool> {
                 &add.location,
                 add.line_limit,
                 &add.refresh_time,
-                FileType::Local);
+                FileType::Local,
+            );
             cmd.execute(logset)?;
-        },
+        }
         FileType::Http => {
             let mut cmd = AddFileCommand::new(
                 &add.name,
                 &add.location,
                 add.line_limit,
                 &add.refresh_time,
-                FileType::Http);
+                FileType::Http,
+            );
             cmd.execute(logset)?;
         }
     }
@@ -194,11 +195,12 @@ pub fn add_re_trigger(re: &AddReTrigger, logset: &mut LogSet) -> BoxResult<bool>
         let log = &mut logset.logs[re.index];
 
         if re.trigger_type == TriggerType::NoEvent {
-                println!("Unknown trigger type!");
-                return Ok(true);
+            println!("Unknown trigger type!");
+            return Ok(true);
         }
 
-        let mut cmd = AddRegexTriggerCommand::new(&re.name, &re.desc, re.trigger_type, &re.regex, re.invert);
+        let mut cmd =
+            AddRegexTriggerCommand::new(&re.name, &re.desc, re.trigger_type, &re.regex, re.invert);
         cmd.execute(log)?;
     }
     Ok(true)

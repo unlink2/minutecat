@@ -1,8 +1,8 @@
-use super::serde::{Serialize, Deserialize};
-use super::typetag;
 use super::error::{BoxResult, TimeStringUnknownOperator};
-use std::time::{SystemTime, UNIX_EPOCH};
+use super::serde::{Deserialize, Serialize};
+use super::typetag;
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// In general the time delay is a very
 /// simple implementation just based on the current
@@ -15,7 +15,9 @@ pub trait TimeSourceClone {
 }
 
 impl<T> TimeSourceClone for T
-where T: 'static + TimeSource + Clone {
+where
+    T: 'static + TimeSource + Clone,
+{
     fn box_clone(&self) -> Box<dyn TimeSource> {
         Box::new(self.clone())
     }
@@ -39,15 +41,14 @@ impl Clone for Box<dyn TimeSource> {
 /// once again useful for demos or unit tests
 #[derive(Clone, Serialize, Deserialize)]
 pub struct InMemoryTimeSource {
-    times: Vec<TimeMs>
+    times: Vec<TimeMs>,
 }
 
 impl InMemoryTimeSource {
     pub fn new(times: Vec<TimeMs>) -> Self {
-        Self {times}
+        Self { times }
     }
 }
-
 
 #[typetag::serde]
 impl TimeSource for InMemoryTimeSource {
@@ -60,7 +61,7 @@ impl TimeSource for InMemoryTimeSource {
 pub enum TimeSourceTypes {
     Clock(ClockTimeSource),
     InMemory(InMemoryTimeSource),
-    Generic(Box<dyn TimeSource>)
+    Generic(Box<dyn TimeSource>),
 }
 
 #[typetag::serde]
@@ -69,7 +70,7 @@ impl TimeSource for TimeSourceTypes {
         match self {
             Self::Clock(ts) => ts.get_time_ms(),
             Self::InMemory(ts) => ts.get_time_ms(),
-            Self::Generic(ts) => ts.get_time_ms()
+            Self::Generic(ts) => ts.get_time_ms(),
         }
     }
 }
@@ -89,15 +90,13 @@ impl TimeSource for ClockTimeSource {
     }
 }
 
-
-
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Task {
     repeat: bool,
     done: bool,
     delay: TimeMs,
     start: TimeMs,
-    time_src: TimeSourceTypes
+    time_src: TimeSourceTypes,
 }
 
 impl Task {
@@ -107,7 +106,7 @@ impl Task {
             done: false,
             delay,
             start: time_src.get_time_ms(),
-            time_src
+            time_src,
         }
     }
 
@@ -146,17 +145,14 @@ impl Task {
         time_str: &str,
         start: usize,
         current: &mut usize,
-        operators: &HashMap<&str, TimeMs>) -> BoxResult<TimeMs> {
-        while Self::is_alpha(time_str
-                .chars()
-                .nth(*current)
-                .unwrap_or('\0')) {
+        operators: &HashMap<&str, TimeMs>,
+    ) -> BoxResult<TimeMs> {
+        while Self::is_alpha(time_str.chars().nth(*current).unwrap_or('\0')) {
             *current += 1;
         }
         // no operator? return 1, but only if
         // current is end of string too
-        if start == *current
-            && *current >= time_str.len() {
+        if start == *current && *current >= time_str.len() {
             return Ok(1);
         } else if start == *current {
             return Err(Box::new(TimeStringUnknownOperator));
@@ -164,19 +160,13 @@ impl Task {
             let operator = &time_str[start..*current];
             match operators.get(operator) {
                 Some(value) => Ok(*value),
-                _ => Err(Box::new(TimeStringUnknownOperator))
+                _ => Err(Box::new(TimeStringUnknownOperator)),
             }
         }
     }
 
-    fn scan_num(
-        time_str: &str,
-        start: usize,
-        current: &mut usize) -> BoxResult<TimeMs> {
-        while Self::is_numeric(time_str
-                .chars()
-                .nth(*current)
-                .unwrap_or('\0')) {
+    fn scan_num(time_str: &str, start: usize, current: &mut usize) -> BoxResult<TimeMs> {
+        while Self::is_numeric(time_str.chars().nth(*current).unwrap_or('\0')) {
             *current += 1;
         }
 
@@ -189,17 +179,15 @@ impl Task {
     }
 
     pub fn is_alpha(c: char) -> bool {
-        (c >= 'a' && c <= 'z') ||
-            (c >= 'A' && c <= 'Z')
+        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
     }
 
     pub fn next_time(&self) -> u128 {
-        self.start+self.delay
+        self.start + self.delay
     }
 
     pub fn is_due(&mut self) -> bool {
-        if !self.done
-            && self.next_time() < self.time_src.get_time_ms() {
+        if !self.done && self.next_time() < self.time_src.get_time_ms() {
             self.done = !self.repeat; // if no repeate set to done
             self.start = self.time_src.get_time_ms(); // next start time
             true
@@ -215,7 +203,7 @@ impl Task {
         let operators = vec![("h", 3600000), ("m", 60000), ("s", 1000), ("ms", 1)];
 
         for (key, value) in operators {
-            result = format!("{}{}{}", result, remainder/value, key);
+            result = format!("{}{}{}", result, remainder / value, key);
             remainder = remainder % value;
         }
 
@@ -229,7 +217,11 @@ mod tests {
 
     #[test]
     fn it_should_not_trigger() {
-        let mut t = Task::new(true, 10, TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![101, 101, 100])));
+        let mut t = Task::new(
+            true,
+            10,
+            TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![101, 101, 100])),
+        );
 
         assert!(!t.done);
         assert_eq!(t.start, 100);
@@ -240,7 +232,11 @@ mod tests {
 
     #[test]
     fn it_should_trigger_and_repeat() {
-        let mut t = Task::new(true, 10, TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![111, 111, 100])));
+        let mut t = Task::new(
+            true,
+            10,
+            TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![111, 111, 100])),
+        );
 
         assert!(!t.done);
         assert_eq!(t.start, 100);
@@ -251,7 +247,11 @@ mod tests {
 
     #[test]
     fn it_should_trigger_and_not_repeat() {
-        let mut t = Task::new(false, 10, TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![122, 111, 111, 100])));
+        let mut t = Task::new(
+            false,
+            10,
+            TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![122, 111, 111, 100])),
+        );
 
         assert!(!t.done);
         assert_eq!(t.start, 100);
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     fn it_should_parse_time_str() {
         let ms = Task::scan("1h20m10s5").unwrap();
-        assert_eq!(ms, (1*3600000) + (20*60000) + (10*1000) + 5);
+        assert_eq!(ms, (1 * 3600000) + (20 * 60000) + (10 * 1000) + 5);
     }
 
     #[test]
@@ -274,8 +274,12 @@ mod tests {
 
     #[test]
     fn it_should_revert_time_str() {
-        let ms = Task::from_str(false, "1h20m10s5",
-            TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![]))).unwrap();
+        let ms = Task::from_str(
+            false,
+            "1h20m10s5",
+            TimeSourceTypes::InMemory(InMemoryTimeSource::new(vec![])),
+        )
+        .unwrap();
         assert_eq!(ms.get_time_str(), "1h20m10s5ms".to_string());
     }
 }
