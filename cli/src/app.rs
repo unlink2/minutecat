@@ -1,5 +1,5 @@
 use super::event::{Event, Events};
-use super::minutecat::error::BoxResult;
+use super::minutecat::error::Error;
 use super::minutecat::interface::Interface;
 use super::minutecat::trigger::TriggerType;
 use super::tab::TabManager;
@@ -22,7 +22,6 @@ where
 {
     pub tabs: TabManager,
     pub interface: Interface,
-    // this thread runs updates
     terminal: Terminal<B>,
     events: Events,
 }
@@ -61,18 +60,23 @@ where
         }
     }
 
-    pub async fn init(&mut self) -> BoxResult<()> {
+    pub async fn init(&mut self) -> Result<(), Error> {
         Self::update_logs(&mut self.interface, &mut self.tabs, true).await;
 
         Ok(())
     }
 
-    pub async fn update(&mut self) -> BoxResult<bool> {
+    pub async fn update(&mut self) -> Result<bool, Error> {
         // do forever
         Self::update_logs(&mut self.interface, &mut self.tabs, false).await;
 
         self.render()?;
-        if let Event::Input(input) = self.events.next()? {
+        let next_event = match self.events.next() {
+            Ok(next_event) => next_event,
+            Err(_err) => return Err(Error::GenericError),
+        };
+
+        if let Event::Input(input) = next_event {
             match input {
                 Key::Char('q') => {
                     return Ok(true);
@@ -192,7 +196,7 @@ where
         f.render_widget(tabs, *chunk);
     }
 
-    pub fn render(&mut self) -> BoxResult<()> {
+    pub fn render(&mut self) -> Result<(), Error> {
         let tab_manager = &mut self.tabs;
 
         self.terminal.draw(|mut f| {

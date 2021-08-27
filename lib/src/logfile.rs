@@ -1,4 +1,4 @@
-use super::error::BoxResult;
+use super::error::Error;
 use super::extra::ExtraData;
 use super::serde::{Deserialize, Serialize};
 use super::source::{DataSource, DataSourceTypes};
@@ -84,7 +84,10 @@ impl Logfile {
     /// Note that currently update may call long blocking IO operations
     /// and is therefore best used in a thread.
     /// There might be an async version in the future.
-    pub async fn update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
+    pub async fn update(
+        &mut self,
+        handlers: &mut Vec<&mut dyn EventHandler>,
+    ) -> Result<bool, Error> {
         // is it ready to update?
         if !self.task.is_due() {
             return Ok(false);
@@ -95,7 +98,7 @@ impl Logfile {
     pub async fn force_update(
         &mut self,
         handlers: &mut Vec<&mut dyn EventHandler>,
-    ) -> BoxResult<bool> {
+    ) -> Result<bool, Error> {
         // if so refresh source
         let text = self.source.load().await?;
 
@@ -108,7 +111,7 @@ impl Logfile {
         &mut self,
         handlers: &mut Vec<&mut dyn EventHandler>,
         text: &str,
-    ) -> BoxResult<()> {
+    ) -> Result<(), Error> {
         // and check triggers
 
         if self.triggers.len() == 0 {

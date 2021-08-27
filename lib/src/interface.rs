@@ -1,7 +1,7 @@
 use super::clap::{AppSettings, Clap};
 use super::command::*;
 use super::dirs;
-use super::error::BoxResult;
+use super::error::Error;
 use super::logset::LogSet;
 use super::trigger::{Trigger, TriggerType};
 use std::env;
@@ -108,7 +108,7 @@ fn init_cfg_dir() -> std::io::Result<()> {
     std::fs::create_dir_all(config_path())
 }
 
-pub fn init_logset() -> BoxResult<(LogSet, String)> {
+pub fn init_logset() -> Result<(LogSet, String), Error> {
     let cfg_dir = config_path().join("config.yaml");
     let cfg_path = cfg_dir
         .to_str()
@@ -120,7 +120,7 @@ pub fn init_logset() -> BoxResult<(LogSet, String)> {
     return Ok((logset, cfg_path.into()));
 }
 
-pub fn command_line() -> BoxResult<Interface> {
+pub fn command_line() -> Result<Interface, Error> {
     let options = Opts::parse();
     let (mut logset, cfg_path) = init_logset()?;
 
@@ -148,7 +148,7 @@ pub fn command_line() -> BoxResult<Interface> {
     })
 }
 
-pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<bool> {
+pub fn add_cmd(add: &Add, logset: &mut LogSet) -> Result<bool, Error> {
     match add.logtype {
         FileType::Local => {
             let mut cmd = AddFileCommand::new(
@@ -174,7 +174,7 @@ pub fn add_cmd(add: &Add, logset: &mut LogSet) -> BoxResult<bool> {
     Ok(true)
 }
 
-pub fn list_cmd(_list: &List, logset: &mut LogSet) -> BoxResult<bool> {
+pub fn list_cmd(_list: &List, logset: &mut LogSet) -> Result<bool, Error> {
     for (i, log) in logset.logs.iter().enumerate() {
         println!("{}: {}", i, log.name);
     }
@@ -182,13 +182,13 @@ pub fn list_cmd(_list: &List, logset: &mut LogSet) -> BoxResult<bool> {
     Ok(true)
 }
 
-pub fn delete_cmd(delete: &Delete, logset: &mut LogSet) -> BoxResult<bool> {
+pub fn delete_cmd(delete: &Delete, logset: &mut LogSet) -> Result<bool, Error> {
     let mut cmd = DeleteLogfileCommand::new(delete.index);
     cmd.execute(logset)?;
     Ok(true)
 }
 
-pub fn add_re_trigger(re: &AddReTrigger, logset: &mut LogSet) -> BoxResult<bool> {
+pub fn add_re_trigger(re: &AddReTrigger, logset: &mut LogSet) -> Result<bool, Error> {
     if re.index >= logset.len() {
         println!("Index out of bounds!");
     } else {
@@ -206,7 +206,7 @@ pub fn add_re_trigger(re: &AddReTrigger, logset: &mut LogSet) -> BoxResult<bool>
     Ok(true)
 }
 
-pub fn list_trigger(lt: &ListTrigger, logset: &mut LogSet) -> BoxResult<bool> {
+pub fn list_trigger(lt: &ListTrigger, logset: &mut LogSet) -> Result<bool, Error> {
     if lt.index >= logset.len() {
         println!("Index out of bounds!");
     } else {
@@ -219,7 +219,7 @@ pub fn list_trigger(lt: &ListTrigger, logset: &mut LogSet) -> BoxResult<bool> {
     Ok(true)
 }
 
-pub fn delete_trigger(dt: &DeleteTrigger, logset: &mut LogSet) -> BoxResult<bool> {
+pub fn delete_trigger(dt: &DeleteTrigger, logset: &mut LogSet) -> Result<bool, Error> {
     if dt.log_index >= logset.len() {
         println!("Index out of bounds!");
     } else {

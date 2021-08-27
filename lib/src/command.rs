@@ -1,4 +1,4 @@
-use super::error::{BoxResult, FromStringError};
+use super::error::Error;
 use super::logfile::Logfile;
 use super::logset::LogSet;
 use super::source::{DataSourceTypes, FileDataSource, HttpDataSource};
@@ -21,8 +21,8 @@ use std::str::FromStr;
 ///
 /// Because they are self-contained they can easily be tested as well!
 pub trait Command<T> {
-    fn execute(&mut self, obj: &mut T) -> BoxResult<()>;
-    fn undo(&mut self, obj: &mut T) -> BoxResult<()>;
+    fn execute(&mut self, obj: &mut T) -> Result<(), Error>;
+    fn undo(&mut self, obj: &mut T) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -38,12 +38,12 @@ impl fmt::Display for FileType {
 }
 
 impl FromStr for FileType {
-    type Err = FromStringError;
+    type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "local" => Ok(Self::Local),
             "http" => Ok(Self::Http),
-            _ => Err(FromStringError),
+            _ => Err(Error::FromStringError),
         }
     }
 }
@@ -77,7 +77,7 @@ impl AddFileCommand {
 }
 
 impl Command<LogSet> for AddFileCommand {
-    fn execute(&mut self, logset: &mut LogSet) -> BoxResult<()> {
+    fn execute(&mut self, logset: &mut LogSet) -> Result<(), Error> {
         let ds = match self.file_type {
             FileType::Local => {
                 DataSourceTypes::File(FileDataSource::new(&self.location, self.line_limit))
@@ -97,7 +97,7 @@ impl Command<LogSet> for AddFileCommand {
         Ok(())
     }
 
-    fn undo(&mut self, logset: &mut LogSet) -> BoxResult<()> {
+    fn undo(&mut self, logset: &mut LogSet) -> Result<(), Error> {
         if self.can_undo {
             self.can_undo = false;
             logset.pop();
@@ -121,12 +121,12 @@ impl DeleteLogfileCommand {
 }
 
 impl Command<LogSet> for DeleteLogfileCommand {
-    fn execute(&mut self, logset: &mut LogSet) -> BoxResult<()> {
+    fn execute(&mut self, logset: &mut LogSet) -> Result<(), Error> {
         self.removed = logset.remove(self.index);
         Ok(())
     }
 
-    fn undo(&mut self, logset: &mut LogSet) -> BoxResult<()> {
+    fn undo(&mut self, logset: &mut LogSet) -> Result<(), Error> {
         match &self.removed {
             Some(logfile) => {
                 logset.push(logfile.clone());
@@ -167,7 +167,7 @@ impl AddRegexTriggerCommand {
 }
 
 impl Command<Logfile> for AddRegexTriggerCommand {
-    fn execute(&mut self, log: &mut Logfile) -> BoxResult<()> {
+    fn execute(&mut self, log: &mut Logfile) -> Result<(), Error> {
         log.push(TriggerTypes::Regex(RegexTrigger::new(
             &self.name,
             &self.desc,
@@ -179,7 +179,7 @@ impl Command<Logfile> for AddRegexTriggerCommand {
         Ok(())
     }
 
-    fn undo(&mut self, log: &mut Logfile) -> BoxResult<()> {
+    fn undo(&mut self, log: &mut Logfile) -> Result<(), Error> {
         if self.can_undo {
             log.pop();
             self.can_undo = false;
@@ -203,12 +203,12 @@ impl RemoveTriggerCommand {
 }
 
 impl Command<Logfile> for RemoveTriggerCommand {
-    fn execute(&mut self, log: &mut Logfile) -> BoxResult<()> {
+    fn execute(&mut self, log: &mut Logfile) -> Result<(), Error> {
         self.removed = log.remove(self.index);
         Ok(())
     }
 
-    fn undo(&mut self, log: &mut Logfile) -> BoxResult<()> {
+    fn undo(&mut self, log: &mut Logfile) -> Result<(), Error> {
         match &self.removed {
             Some(trigger) => {
                 log.push(trigger.clone());

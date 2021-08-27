@@ -1,4 +1,4 @@
-use super::error::{BoxResult, TimeStringUnknownOperator};
+use super::error::Error;
 use super::serde::{Deserialize, Serialize};
 use super::typetag;
 use std::collections::HashMap;
@@ -110,13 +110,17 @@ impl Task {
         }
     }
 
-    pub fn from_str(repeat: bool, time_str: &str, time_src: TimeSourceTypes) -> BoxResult<Self> {
+    pub fn from_str(
+        repeat: bool,
+        time_str: &str,
+        time_src: TimeSourceTypes,
+    ) -> Result<Self, Error> {
         Ok(Self::new(repeat, Self::scan(time_str)?, time_src))
     }
 
     /// scans a string of the following format
     /// 1h30m45s inot a timestamp
-    pub fn scan(time_str: &str) -> BoxResult<TimeMs> {
+    pub fn scan(time_str: &str) -> Result<TimeMs, Error> {
         let mut start;
         let mut current = 0;
         let mut result = 0;
@@ -146,7 +150,7 @@ impl Task {
         start: usize,
         current: &mut usize,
         operators: &HashMap<&str, TimeMs>,
-    ) -> BoxResult<TimeMs> {
+    ) -> Result<TimeMs, Error> {
         while Self::is_alpha(time_str.chars().nth(*current).unwrap_or('\0')) {
             *current += 1;
         }
@@ -155,17 +159,17 @@ impl Task {
         if start == *current && *current >= time_str.len() {
             return Ok(1);
         } else if start == *current {
-            return Err(Box::new(TimeStringUnknownOperator));
+            return Err(Error::TimeStringUnknownOperator);
         } else {
             let operator = &time_str[start..*current];
             match operators.get(operator) {
                 Some(value) => Ok(*value),
-                _ => Err(Box::new(TimeStringUnknownOperator)),
+                _ => Err(Error::TimeStringUnknownOperator),
             }
         }
     }
 
-    fn scan_num(time_str: &str, start: usize, current: &mut usize) -> BoxResult<TimeMs> {
+    fn scan_num(time_str: &str, start: usize, current: &mut usize) -> Result<TimeMs, Error> {
         while Self::is_numeric(time_str.chars().nth(*current).unwrap_or('\0')) {
             *current += 1;
         }

@@ -1,5 +1,4 @@
-use super::error::BoxResult;
-use super::error::UndefinedExtraData;
+use super::error::Error;
 use super::serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -24,8 +23,8 @@ impl ExtraData {
         &mut self,
         name: &str,
         data: &T,
-        serialize: fn(&T) -> BoxResult<String>,
-    ) -> BoxResult<()>
+        serialize: fn(&T) -> Result<String, Error>,
+    ) -> Result<(), Error>
     where
         T: Serialize,
     {
@@ -33,23 +32,27 @@ impl ExtraData {
         Ok(())
     }
 
-    pub fn get<T>(&mut self, name: &str, deserialize: fn(&str) -> BoxResult<T>) -> BoxResult<T> {
+    pub fn get<T>(
+        &mut self,
+        name: &str,
+        deserialize: fn(&str) -> Result<T, Error>,
+    ) -> Result<T, Error> {
         let data = match self.data.get(name) {
             Some(d) => d,
-            _ => return Err(Box::new(UndefinedExtraData)),
+            _ => return Err(Error::UndefinedExtraData),
         };
 
         Ok(deserialize(&data)?)
     }
 
-    pub fn serialize<T>(data: &T) -> BoxResult<String>
+    pub fn serialize<T>(data: &T) -> Result<String, Error>
     where
         T: Serialize,
     {
         Ok(serde_yaml::to_string(&data)?)
     }
 
-    pub fn deserialize<T>(s: &str) -> BoxResult<T>
+    pub fn deserialize<T>(s: &str) -> Result<T, Error>
     where
         T: DeserializeOwned,
     {
@@ -89,9 +92,7 @@ mod tests {
     fn it_should_not_find_invalid_key() {
         let mut extra = ExtraData::new();
         let res = extra.get::<TestData>("Test", ExtraData::deserialize);
-        let uce = res.unwrap_err();
-        let err = uce.downcast_ref::<UndefinedExtraData>();
-        assert!(err.is_some());
+        assert_eq!(res, Err(Error::UndefinedExtraData));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use super::error::BoxResult;
+use super::error::Error;
 use super::logfile::{EventHandler, Logfile};
 use super::serde::{Deserialize, Serialize};
 use super::serde_yaml;
@@ -23,21 +23,21 @@ impl LogSet {
         Self { logs: vec![] }
     }
 
-    pub fn from_path(path: &str) -> BoxResult<Self> {
+    pub fn from_path(path: &str) -> Result<Self, Error> {
         match File::open(Path::new(&path)) {
             Ok(mut file) => Self::from_reader(&mut file),
             Err(_err) => Ok(Self::new()),
         }
     }
 
-    pub fn from_reader(reader: &mut dyn Read) -> BoxResult<Self> {
+    pub fn from_reader(reader: &mut dyn Read) -> Result<Self, Error> {
         let mut r = vec![];
         reader.read_to_end(&mut r)?;
         let s = str::from_utf8(&r)?;
-        Self::deserialize(&s)
+        Ok(Self::deserialize(&s)?)
     }
 
-    pub fn deserialize(s: &str) -> BoxResult<Self> {
+    pub fn deserialize(s: &str) -> Result<Self, Error> {
         Ok(serde_yaml::from_str(s)?)
     }
 
@@ -61,18 +61,21 @@ impl LogSet {
         self.logs.len()
     }
 
-    pub async fn update(&mut self, handlers: &mut Vec<&mut dyn EventHandler>) -> BoxResult<bool> {
+    pub async fn update(
+        &mut self,
+        handlers: &mut Vec<&mut dyn EventHandler>,
+    ) -> Result<bool, Error> {
         for log in &mut self.logs {
             log.update(handlers).await?;
         }
         Ok(true)
     }
 
-    pub fn serialize(&self) -> BoxResult<String> {
+    pub fn serialize(&self) -> Result<String, Error> {
         Ok(serde_yaml::to_string(&self)?)
     }
 
-    pub fn to_file(&self, path: &str) -> BoxResult<()> {
+    pub fn to_file(&self, path: &str) -> Result<(), Error> {
         let mut file = std::fs::File::create(path)?;
         file.write_all(self.serialize()?.as_bytes())?;
         Ok(())

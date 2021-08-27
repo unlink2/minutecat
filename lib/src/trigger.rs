@@ -1,4 +1,4 @@
-use super::error::{BoxResult, FromStringError};
+use super::error::Error;
 use super::regex::Regex;
 use super::serde::{Deserialize, Serialize};
 use super::typetag;
@@ -27,7 +27,7 @@ impl Trigger for TriggerTypes {
         }
     }
 
-    fn check(&self, text: &str) -> BoxResult<bool> {
+    fn check(&self, text: &str) -> Result<bool, Error> {
         match self {
             Self::Regex(t) => t.check(text),
             Self::Generic(t) => t.check(text),
@@ -35,7 +35,7 @@ impl Trigger for TriggerTypes {
     }
 
     /// returns the slice that fired the trigger
-    fn slice<'a>(&self, text: &'a str) -> BoxResult<&'a str> {
+    fn slice<'a>(&self, text: &'a str) -> Result<&'a str, Error> {
         match self {
             Self::Regex(t) => t.slice(text),
             Self::Generic(t) => t.slice(text),
@@ -81,13 +81,13 @@ impl fmt::Display for TriggerType {
 }
 
 impl FromStr for TriggerType {
-    type Err = FromStringError;
+    type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "success" => Ok(Self::Success),
             "warning" => Ok(Self::Warning),
             "error" => Ok(Self::Error),
-            _ => Err(FromStringError),
+            _ => Err(Error::FromStringError),
         }
     }
 }
@@ -99,10 +99,10 @@ impl FromStr for TriggerType {
 pub trait Trigger: TriggerClone + Send {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
-    fn check(&self, text: &str) -> BoxResult<bool>;
+    fn check(&self, text: &str) -> Result<bool, Error>;
 
     /// returns the slice that fired the trigger
-    fn slice<'a>(&self, text: &'a str) -> BoxResult<&'a str>;
+    fn slice<'a>(&self, text: &'a str) -> Result<&'a str, Error>;
     fn get_type(&self) -> TriggerType;
 }
 
@@ -151,12 +151,12 @@ impl Trigger for RegexTrigger {
         &self.description
     }
 
-    fn check(&self, text: &str) -> BoxResult<bool> {
+    fn check(&self, text: &str) -> Result<bool, Error> {
         let re = Regex::new(&self.re)?;
         Ok(re.is_match(text) ^ self.invert)
     }
 
-    fn slice<'a>(&self, text: &'a str) -> BoxResult<&'a str> {
+    fn slice<'a>(&self, text: &'a str) -> Result<&'a str, Error> {
         let re = Regex::new(&self.re)?;
         match re.find(text) {
             Some(ma) => Ok(&text[ma.start()..ma.end()]),

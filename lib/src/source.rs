@@ -1,5 +1,5 @@
 use super::async_trait::async_trait;
-use super::error::{BoxResult, InMemoryDataError};
+use super::error::Error;
 use super::serde::{Deserialize, Serialize};
 use super::typetag;
 use std::fs::File;
@@ -20,7 +20,7 @@ pub enum DataSourceTypes {
 #[typetag::serde]
 #[async_trait]
 impl DataSource for DataSourceTypes {
-    async fn load(&mut self) -> BoxResult<String> {
+    async fn load(&mut self) -> Result<String, Error> {
         match self {
             Self::InMemory(s) => s.load().await,
             Self::File(s) => s.load().await,
@@ -49,7 +49,7 @@ where
 #[typetag::serde(tag = "type")]
 #[async_trait]
 pub trait DataSource: DataSourceClone + Send {
-    async fn load(&mut self) -> BoxResult<String>;
+    async fn load(&mut self) -> Result<String, Error>;
 }
 
 impl Clone for Box<dyn DataSource> {
@@ -77,10 +77,10 @@ impl InMemoryDataSource {
 #[typetag::serde]
 #[async_trait]
 impl DataSource for InMemoryDataSource {
-    async fn load(&mut self) -> BoxResult<String> {
+    async fn load(&mut self) -> Result<String, Error> {
         match self.data.pop() {
             Some(s) => Ok(s),
-            _ => Err(Box::new(InMemoryDataError)),
+            _ => Err(Error::InMemoryDataError),
         }
     }
 }
@@ -113,7 +113,7 @@ where
         }
     }
 
-    fn read_chunk(&mut self, chunk_size: usize) -> BoxResult<(usize, String)> {
+    fn read_chunk(&mut self, chunk_size: usize) -> Result<(usize, String), Error> {
         let mut buf = vec![0u8; chunk_size];
         self.input.read_exact(&mut buf)?;
 
@@ -130,7 +130,7 @@ where
         strbuf.find("\n")
     }
 
-    pub fn read_lines(&mut self) -> BoxResult<String> {
+    pub fn read_lines(&mut self) -> Result<String, Error> {
         // seek backwards in chunk increments
         // until enough new line characters have been found
 
@@ -190,7 +190,7 @@ impl FileDataSource {
 #[typetag::serde]
 #[async_trait]
 impl DataSource for FileDataSource {
-    async fn load(&mut self) -> BoxResult<String> {
+    async fn load(&mut self) -> Result<String, Error> {
         let file = File::open(Path::new(&self.path))?;
         let mut rev_reader = TailReader::new(file, self.line_limit);
 
@@ -215,7 +215,7 @@ impl HttpDataSource {
 #[typetag::serde]
 #[async_trait]
 impl DataSource for HttpDataSource {
-    async fn load(&mut self) -> BoxResult<String> {
+    async fn load(&mut self) -> Result<String, Error> {
         Ok(reqwest::get(&self.url).await?.text().await?)
     }
 }
