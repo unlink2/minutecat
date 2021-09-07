@@ -70,28 +70,31 @@ where
         // do forever
         Self::update_logs(&mut self.interface, &mut self.tabs, false).await;
 
-        self.render()?;
-        let next_event = match self.events.next() {
-            Ok(next_event) => next_event,
-            Err(_err) => return Err(Error::GenericError),
-        };
+        async {
+            self.render()?;
+            let next_event = match self.events.next() {
+                Ok(next_event) => next_event,
+                Err(_err) => return Err(Error::GenericError),
+            };
 
-        if let Event::Input(input) = next_event {
-            match input {
-                Key::Char('q') => {
-                    return Ok(true);
+            if let Event::Input(input) = next_event {
+                match input {
+                    Key::Char('q') => {
+                        return Ok(true);
+                    }
+                    Key::Right => self.tabs.next(),
+                    Key::Left => self.tabs.prev(),
+                    Key::Up => self.tabs.down(),
+                    Key::Down => self.tabs.up(),
+                    Key::PageUp => self.tabs.next_offset(),
+                    Key::PageDown => self.tabs.prev_offset(),
+                    _ => {}
                 }
-                Key::Right => self.tabs.next(),
-                Key::Left => self.tabs.prev(),
-                Key::Up => self.tabs.down(),
-                Key::Down => self.tabs.up(),
-                Key::PageUp => self.tabs.next_offset(),
-                Key::PageDown => self.tabs.prev_offset(),
-                _ => {}
             }
-        }
 
-        return Ok(false);
+            Ok(false)
+        }
+        .await
     }
 
     pub fn render_tabs(f: &mut Frame<B>, tab_manager: &TabManager, chunk: &Rect) {

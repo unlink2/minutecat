@@ -2,12 +2,10 @@ use super::async_trait::async_trait;
 use super::error::Error;
 use super::serde::{Deserialize, Serialize};
 use super::typetag;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::Read;
-use std::io::SeekFrom;
 use std::path::Path;
 use std::str;
+use tokio::fs::File;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, SeekFrom};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum DataSourceTypes {
@@ -94,7 +92,7 @@ impl DataSource for InMemoryDataSource {
  */
 pub struct TailReader<T>
 where
-    T: Read + Seek,
+    T: AsyncRead + AsyncSeek + std::marker::Unpin,
 {
     input: T,
     line_limit: usize,
@@ -103,7 +101,7 @@ where
 
 impl<T> TailReader<T>
 where
-    T: Read + Seek,
+    T: AsyncRead + AsyncSeek + std::marker::Unpin,
 {
     pub fn new(input: T, line_limit: usize) -> Self {
         Self {
@@ -113,9 +111,9 @@ where
         }
     }
 
-    fn read_chunk(&mut self, chunk_size: usize) -> Result<(usize, String), Error> {
+    async fn read_chunk(&mut self, chunk_size: usize) -> Result<(usize, String), Error> {
         let mut buf = vec![0u8; chunk_size];
-        self.input.read_exact(&mut buf)?;
+        self.input.read_exact(&mut buf).await?;
 
         let result = str::from_utf8(&buf)?;
 
@@ -130,12 +128,12 @@ where
         strbuf.find("\n")
     }
 
-    pub fn read_lines(&mut self) -> Result<String, Error> {
+    pub async fn read_lines(&mut self) -> Result<String, Error> {
         // seek backwards in chunk increments
         // until enough new line characters have been found
 
         // get total file size
-        let mut seek_pos = self.input.seek(SeekFrom::End(0))?;
+        let mut seek_pos = self.input.seek(SeekFrom::End(0)).await?;
 
         let mut lines = 0;
         let mut strbuf = "".to_string();
@@ -151,8 +149,8 @@ where
                 chunk_size = self.chunk_size;
             }
 
-            self.input.seek(SeekFrom::Start(seek_pos))?;
-            let (line_count, mut result) = self.read_chunk(chunk_size as usize)?;
+            self.input.seek(SeekFrom::Start(seek_pos)).await?;
+            let (line_count, mut result) = self.read_chunk(chunk_size as usize).await?;
 
             result.push_str(&strbuf);
             strbuf = result;
@@ -191,10 +189,10 @@ impl FileDataSource {
 #[async_trait]
 impl DataSource for FileDataSource {
     async fn load(&mut self) -> Result<String, Error> {
-        let file = File::open(Path::new(&self.path))?;
+        let file = File::open(Path::new(&self.path)).await?;
         let mut rev_reader = TailReader::new(file, self.line_limit);
 
-        return Ok(rev_reader.read_lines()?);
+        return Ok(rev_reader.read_lines().await?);
     }
 }
 
@@ -227,30 +225,30 @@ mod tests {
     use super::*;
     use std::io::Cursor;
 
-    #[test]
-    fn it_should_read_files_in_reverse_up_to_limit() {
+    #[tokio::test]
+    async fn it_should_read_files_in_reverse_up_to_limit() {
         let mut rev_reader =
             TailReader::new(Cursor::new("Data\nWith\nNew\nLines\nFor\nUnit\nTests"), 3);
         rev_reader.chunk_size = 4; // for testing we lower chunk size
 
-        let lines = rev_reader.read_lines().unwrap();
+        let lines = rev_reader.read_lines().await.unwrap();
         assert_eq!(lines, "For\nUnit\nTests");
     }
 
-    #[test]
-    fn it_should_read_files_in_reverse_up_to_start() {
+    #[tokio::test]
+    async fn it_should_read_files_in_reverse_up_to_start() {
         let mut rev_reader = TailReader::new(Cursor::new("Data\nWith\nNew\nLines"), 10);
         rev_reader.chunk_size = 4; // for testing we lower chunk size
 
-        let lines = rev_reader.read_lines().unwrap();
+        let lines = rev_reader.read_lines().await.unwrap();
         assert_eq!(lines, "Data\nWith\nNew\nLines");
     }
 
-    #[test]
-    fn it_should_read_files_in_reverse_up_to_start_when_chunk_is_larger_than_file() {
+    #[tokio::test]
+    async fn it_should_read_files_in_reverse_up_to_start_when_chunk_is_larger_than_file() {
         let mut rev_reader = TailReader::new(Cursor::new("Data\nWith\nNew\nLines"), 10);
 
-        let lines = rev_reader.read_lines().unwrap();
+        let lines = rev_reader.read_lines().await.unwrap();
         assert_eq!(lines, "Data\nWith\nNew\nLines");
     }
 }
