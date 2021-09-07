@@ -1,87 +1,12 @@
-use super::async_trait::async_trait;
-use super::error::Error;
-use super::serde::{Deserialize, Serialize};
-use super::typetag;
+use crate::async_trait::async_trait;
+use crate::error::Error;
+use crate::serde::{Deserialize, Serialize};
+use crate::typetag;
+use crate::DataSource;
 use std::path::Path;
 use std::str;
 use tokio::fs::File;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, SeekFrom};
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum DataSourceTypes {
-    InMemory(InMemoryDataSource),
-    File(FileDataSource),
-    Http(HttpDataSource),
-    Generic(Box<dyn DataSource>),
-}
-
-#[typetag::serde]
-#[async_trait]
-impl DataSource for DataSourceTypes {
-    async fn load(&mut self) -> Result<String, Error> {
-        match self {
-            Self::InMemory(s) => s.load().await,
-            Self::File(s) => s.load().await,
-            Self::Http(s) => s.load().await,
-            Self::Generic(s) => s.load().await,
-        }
-    }
-}
-
-pub trait DataSourceClone {
-    fn box_clone(&self) -> Box<dyn DataSource>;
-}
-
-impl<T> DataSourceClone for T
-where
-    T: 'static + DataSource + Clone,
-{
-    fn box_clone(&self) -> Box<dyn DataSource> {
-        Box::new(self.clone())
-    }
-}
-
-/// A datasource knows how to fetch a logfile
-/// from a location e.g. local file system,
-/// ssh or http
-#[typetag::serde(tag = "type")]
-#[async_trait]
-pub trait DataSource: DataSourceClone + Send {
-    async fn load(&mut self) -> Result<String, Error>;
-}
-
-impl Clone for Box<dyn DataSource> {
-    fn clone(&self) -> Box<dyn DataSource> {
-        self.box_clone()
-    }
-}
-
-/// this is a dummy data source
-/// it provides the next item in
-/// the vector until it is exhausted
-/// this is mostly useful to supply dummy data
-/// to logfile structs
-#[derive(Clone, Serialize, Deserialize)]
-pub struct InMemoryDataSource {
-    data: Vec<String>,
-}
-
-impl InMemoryDataSource {
-    pub fn new(data: Vec<String>) -> Self {
-        Self { data }
-    }
-}
-
-#[typetag::serde]
-#[async_trait]
-impl DataSource for InMemoryDataSource {
-    async fn load(&mut self) -> Result<String, Error> {
-        match self.data.pop() {
-            Some(s) => Ok(s),
-            _ => Err(Error::InMemoryDataError),
-        }
-    }
-}
 
 /**
  * File data input
@@ -195,30 +120,6 @@ impl DataSource for FileDataSource {
         return Ok(rev_reader.read_lines().await?);
     }
 }
-
-/**
- * Http data input
- */
-#[derive(Clone, Serialize, Deserialize)]
-pub struct HttpDataSource {
-    url: String,
-}
-
-impl HttpDataSource {
-    pub fn new(url: &str) -> Self {
-        Self { url: url.into() }
-    }
-}
-
-#[typetag::serde]
-#[async_trait]
-impl DataSource for HttpDataSource {
-    async fn load(&mut self) -> Result<String, Error> {
-        Ok(reqwest::get(&self.url).await?.text().await?)
-    }
-}
-
-// TODO this be tested in a sane way at all?
 
 #[cfg(test)]
 mod tests {
