@@ -11,7 +11,7 @@ use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
+    text::{Span, Spans, Text},
     widgets::{Block, Borders, Paragraph, Tabs, Wrap},
     Frame, Terminal,
 };
@@ -40,7 +40,9 @@ where
     }
 
     pub async fn update_logs(interface: &mut Interface, tabs: &mut TabManager, force: bool) {
-        for (index, log) in &mut interface.logset.logs.iter_mut().enumerate() {
+        let iter = interface.logset.slice_mut().iter_mut();
+
+        for (index, log) in &mut iter.enumerate() {
             // update logs
             // TODO handle errors better!
 
@@ -71,7 +73,6 @@ where
         Self::update_logs(&mut self.interface, &mut self.tabs, false).await;
 
         async {
-            self.render()?;
             let next_event = match self.events.next() {
                 Ok(next_event) => next_event,
                 Err(_err) => return Err(Error::GenericError),
@@ -86,8 +87,8 @@ where
                     Key::Left => self.tabs.prev(),
                     Key::Up => self.tabs.down(),
                     Key::Down => self.tabs.up(),
-                    Key::PageUp => self.tabs.next_offset(),
-                    Key::PageDown => self.tabs.prev_offset(),
+                    Key::PageUp | Key::Char('>') => self.tabs.next_offset(),
+                    Key::PageDown | Key::Char('<') => self.tabs.prev_offset(),
                     _ => {}
                 }
             }
@@ -95,6 +96,11 @@ where
             Ok(false)
         }
         .await
+    }
+
+    pub async fn draw(&mut self) -> Result<(), Error> {
+        self.render()?;
+        Ok(())
     }
 
     pub fn render_tabs(f: &mut Frame<B>, tab_manager: &TabManager, chunk: &Rect) {
@@ -148,10 +154,10 @@ where
         let datetime = DateTime::<Local>::from(d);
 
         // render content
-        let content = Paragraph::new(log.text.clone())
+        let content = Paragraph::new(Text::raw(&log.text))
             .block(Block::default().borders(Borders::ALL).title(format!(
                 "{} Next: {}",
-                log.name.clone(),
+                &log.name,
                 datetime.format("%Y-%m-%d %H:%M:%S")
             )))
             .wrap(Wrap { trim: true })
@@ -199,6 +205,14 @@ where
         f.render_widget(tabs, *chunk);
     }
 
+    pub fn render_help(f: &mut Frame<B>, _tab_manager: &TabManager, chunk: &Rect) {
+        let content = Paragraph::new("Left/Right/Up/Down | Q: Exit | PAGE UP/DOWN")
+            .block(Block::default().borders(Borders::ALL).title("Help"))
+            .wrap(Wrap { trim: true })
+            .alignment(Alignment::Left);
+        f.render_widget(content, *chunk);
+    }
+
     pub fn render(&mut self) -> Result<(), Error> {
         let tab_manager = &mut self.tabs;
 
@@ -212,6 +226,7 @@ where
                     [
                         Constraint::Length(3),
                         Constraint::Min(0),
+                        Constraint::Length(3),
                         Constraint::Length(3),
                     ]
                     .as_ref(),
@@ -231,6 +246,7 @@ where
                 // render info about matches
                 Self::render_info(&mut f, &tab_manager, &chunks[2]);
             }
+            Self::render_help(&mut f, &tab_manager, &chunks[3]);
         })?;
         Ok(())
     }

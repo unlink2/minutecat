@@ -25,32 +25,39 @@ impl PartialEq for Error {
 }
 
 impl Error {
-    fn as_str(&self) -> &str {
+    fn to_string(&self) -> String {
         match self {
             Self::InMemoryDataError => "InMemoryDataError",
             Self::TimeStringUnknownOperator => "Unknown Operator",
             Self::UndefinedExtraData => "UndefinedExtraData",
             Self::FromStringError => "FromStrError",
+            Self::IoError(e) => return e.to_string(),
+            Self::Utf8Error(e) => return e.to_string(),
+            Self::ParseIntError(e) => return e.to_string(),
+            Self::SerdeYamlError(e) => return e.to_string(),
+            Self::ReqwestError(e) => return e.to_string(),
+            Self::RegexError(e) => return e.to_string(),
             _ => "NoString",
         }
+        .into()
     }
 }
 
 impl std::error::Error for Error {
     fn description(&self) -> &str {
-        self.as_str()
+        "MinutecatError"
     }
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
+        write!(f, "{}", self.to_string())
     }
 }
 
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
+        write!(f, "{}", self.to_string())
     }
 }
 

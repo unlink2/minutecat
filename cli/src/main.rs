@@ -27,7 +27,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut app = App::new(interface, terminal);
 
     app.init().await?;
-    while !app.update().await? {}
+    while !app.update().await? {
+        app.draw().await?;
+    }
 
     // always save in the end!
     // interface.logset.to_file(&interface.cfg_path)?;

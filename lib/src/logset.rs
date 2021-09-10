@@ -65,10 +65,24 @@ impl LogSet {
         &mut self,
         handlers: &mut Vec<&mut dyn EventHandler>,
     ) -> Result<bool, Error> {
-        for log in &mut self.logs {
+        for log in self.slice_mut() {
             log.update(handlers).await?;
         }
         Ok(true)
+    }
+
+    pub async fn force_update(
+        &mut self,
+        handlers: &mut Vec<&mut dyn EventHandler>,
+    ) -> Result<bool, Error> {
+        for log in self.slice_mut() {
+            log.force_update(handlers).await?;
+        }
+        Ok(true)
+    }
+
+    pub fn slice_mut(&mut self) -> &mut [Logfile] {
+        &mut self.logs[..]
     }
 
     pub fn serialize(&self) -> Result<String, Error> {
