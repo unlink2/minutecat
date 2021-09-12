@@ -11,11 +11,16 @@ use std::str;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HttpDataSource {
     url: String,
+    #[serde(skip)]
+    client: Option<reqwest::Client>,
 }
 
 impl HttpDataSource {
     pub fn new(url: &str) -> Self {
-        Self { url: url.into() }
+        Self {
+            url: url.into(),
+            client: None,
+        }
     }
 }
 
@@ -23,6 +28,13 @@ impl HttpDataSource {
 #[async_trait]
 impl DataSource for HttpDataSource {
     async fn load(&mut self) -> Result<String, Error> {
-        Ok(reqwest::get(&self.url).await?.text().await?)
+        match &mut self.client {
+            Some(client) => Ok(client.get(&self.url).send().await?.text().await?),
+            None => {
+                // cache the client and call again
+                self.client = Some(reqwest::Client::builder().build()?);
+                self.load().await
+            }
+        }
     }
 }
