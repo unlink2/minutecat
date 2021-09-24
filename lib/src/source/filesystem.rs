@@ -42,15 +42,15 @@ where
 
         let result = str::from_utf8(&buf)?;
 
-        Ok((self.count_lines(&result), result.into()))
+        Ok((self.count_lines(result), result.into()))
     }
 
     fn count_lines(&self, strbuf: &str) -> usize {
-        strbuf.matches("\n").count()
+        strbuf.matches('\n').count()
     }
 
     fn trim(&self, strbuf: &str) -> Option<usize> {
-        strbuf.find("\n")
+        strbuf.find('\n')
     }
 
     pub async fn read_lines(&mut self) -> Result<String, Error> {
@@ -70,7 +70,7 @@ where
                 chunk_size = seek_pos;
                 seek_pos = 0;
             } else {
-                seek_pos = seek_pos - self.chunk_size;
+                seek_pos -= self.chunk_size;
                 chunk_size = self.chunk_size;
             }
 
@@ -91,7 +91,7 @@ where
             }
         }
 
-        return Ok(slice.into());
+        Ok(slice.into())
     }
 }
 
@@ -117,7 +117,7 @@ impl DataSource for FileDataSource {
         let file = File::open(Path::new(&self.path)).await?;
         let mut rev_reader = TailReader::new(file, self.line_limit);
 
-        return Ok(rev_reader.read_lines().await?);
+        Ok(rev_reader.read_lines().await?)
     }
 }
 

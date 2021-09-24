@@ -66,7 +66,7 @@ impl TabManager {
 
     pub fn prev(&mut self) {
         self.scroll = (0, 0);
-        if self.index <= 0 {
+        if self.index == 0 {
             self.index = self.max - 1;
         } else {
             self.index -= 1;
@@ -82,7 +82,7 @@ impl TabManager {
     }
 
     pub fn prev_offset(&mut self) {
-        if self.tab_offset <= 0 {
+        if self.tab_offset == 0 {
             self.tab_offset = self.max - 1;
         } else {
             self.tab_offset -= 1;
@@ -99,13 +99,11 @@ impl EventHandler for TabState {
                     trigger.slice(event.text).unwrap_or("").into(),
                 );
                 self.trigger_type = trigger.get_type();
-            } else {
-                if self.slices.contains_key(trigger.name()) {
-                    self.slices.remove(trigger.name());
-                }
+            } else if self.slices.contains_key(trigger.name()) {
+                self.slices.remove(trigger.name());
             }
         }
-        if event.did_trigger || self.name == "" {
+        if event.did_trigger || self.name.is_empty() {
             self.text = event.text.into();
             self.name = event.name.into();
         }

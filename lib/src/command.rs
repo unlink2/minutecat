@@ -127,12 +127,9 @@ impl Command<LogSet> for DeleteLogfileCommand {
     }
 
     fn undo(&mut self, logset: &mut LogSet) -> Result<(), Error> {
-        match &self.removed {
-            Some(logfile) => {
-                logset.push(logfile.clone());
-                self.removed = None;
-            }
-            _ => {}
+        if let Some(logfile) = &self.removed {
+            logset.push(logfile.clone());
+            self.removed = None;
         }
         Ok(())
     }
@@ -209,12 +206,9 @@ impl Command<Logfile> for RemoveTriggerCommand {
     }
 
     fn undo(&mut self, log: &mut Logfile) -> Result<(), Error> {
-        match &self.removed {
-            Some(trigger) => {
-                log.push(trigger.clone());
-                self.removed = None;
-            }
-            _ => {}
+        if let Some(trigger) = &self.removed {
+            log.push(trigger.clone());
+            self.removed = None;
         }
         Ok(())
     }

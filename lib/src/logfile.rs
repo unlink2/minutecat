@@ -77,6 +77,10 @@ impl Logfile {
         self.triggers.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// call this to update
     /// a logfile based on the task timer
     /// and the data source origin
@@ -104,7 +108,7 @@ impl Logfile {
 
         self.check(handlers, &text)?;
 
-        return Ok(true);
+        Ok(true)
     }
 
     pub fn check(
@@ -114,7 +118,7 @@ impl Logfile {
     ) -> Result<(), Error> {
         // and check triggers
 
-        if self.triggers.len() == 0 {
+        if self.triggers.is_empty() {
             let event = Event {
                 did_trigger: false,
                 trigger: None,
@@ -129,7 +133,7 @@ impl Logfile {
         } else {
             for trigger in &self.triggers[..] {
                 let event = Event {
-                    did_trigger: trigger.check(&text)?,
+                    did_trigger: trigger.check(text)?,
                     trigger: Some(trigger),
                     task: &self.task,
                     extra: &mut self.extra,
@@ -141,7 +145,7 @@ impl Logfile {
                 }
             }
         }
-        return Ok(());
+        Ok(())
     }
 }
 

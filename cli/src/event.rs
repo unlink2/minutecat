@@ -62,9 +62,15 @@ impl Default for Config {
     }
 }
 
-impl Events {
-    pub fn new() -> Events {
+impl Default for Events {
+    fn default() -> Self {
         Events::with_config(Config::default())
+    }
+}
+
+impl Events {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn with_config(config: Config) -> Events {
@@ -76,13 +82,18 @@ impl Events {
             thread::spawn(move || {
                 let stdin = io::stdin();
                 for evt in stdin.keys() {
-                    if let Ok(key) = evt {
-                        if let Err(err) = tx.send(Event::Input(key)) {
-                            eprintln!("{}", err);
-                            return;
+                    match evt {
+                        Ok(key) => {
+                            if let Err(err) = tx.send(Event::Input(key)) {
+                                eprintln!("{}", err);
+                                return;
+                            }
+                            if !ignore_exit_key.load(Ordering::Relaxed) && key == config.exit_key {
+                                return;
+                            }
                         }
-                        if !ignore_exit_key.load(Ordering::Relaxed) && key == config.exit_key {
-                            return;
+                        Err(err) => {
+                            eprintln!("{}", err)
                         }
                     }
                 }

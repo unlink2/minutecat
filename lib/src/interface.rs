@@ -117,7 +117,7 @@ pub fn init_logset() -> Result<(LogSet, String), Error> {
     init_cfg_dir()?;
     let logset = LogSet::from_path(cfg_path)?;
 
-    return Ok((logset, cfg_path.into()));
+    Ok((logset, cfg_path.into()))
 }
 
 pub fn command_line() -> Result<Interface, Error> {
@@ -126,12 +126,12 @@ pub fn command_line() -> Result<Interface, Error> {
 
     let exit = match &options.subcmd {
         Some(subcmd) => match &subcmd {
-            SubCommand::Add(add) => add_cmd(&add, &mut logset)?,
-            SubCommand::List(list) => list_cmd(&list, &mut logset)?,
-            SubCommand::Delete(delete) => delete_cmd(&delete, &mut logset)?,
-            SubCommand::AddReTrigger(re) => add_re_trigger(&re, &mut logset)?,
-            SubCommand::ListTrigger(lt) => list_trigger(&lt, &mut logset)?,
-            SubCommand::DeleteTrigger(dt) => delete_trigger(&dt, &mut logset)?,
+            SubCommand::Add(add) => add_cmd(add, &mut logset)?,
+            SubCommand::List(list) => list_cmd(list, &mut logset)?,
+            SubCommand::Delete(delete) => delete_cmd(delete, &mut logset)?,
+            SubCommand::AddReTrigger(re) => add_re_trigger(re, &mut logset)?,
+            SubCommand::ListTrigger(lt) => list_trigger(lt, &mut logset)?,
+            SubCommand::DeleteTrigger(dt) => delete_trigger(dt, &mut logset)?,
         },
         _ => false,
     };
@@ -144,7 +144,7 @@ pub fn command_line() -> Result<Interface, Error> {
     Ok(Interface {
         logset,
         options,
-        cfg_path: cfg_path.into(),
+        cfg_path,
     })
 }
 

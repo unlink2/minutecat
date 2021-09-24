@@ -42,7 +42,7 @@ impl ExtraData {
             _ => return Err(Error::UndefinedExtraData),
         };
 
-        Ok(deserialize(&data)?)
+        deserialize(data)
     }
 
     pub fn serialize<T>(data: &T) -> Result<String, Error>

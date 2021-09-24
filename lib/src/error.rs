@@ -14,18 +14,21 @@ pub enum Error {
 
 impl PartialEq for Error {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::InMemoryDataError, Self::InMemoryDataError) => true,
-            (Self::TimeStringUnknownOperator, Self::TimeStringUnknownOperator) => true,
-            (Self::FromStringError, Self::FromStringError) => true,
-            (Self::UndefinedExtraData, Self::UndefinedExtraData) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Self::InMemoryDataError, Self::InMemoryDataError)
+                | (
+                    Self::TimeStringUnknownOperator,
+                    Self::TimeStringUnknownOperator
+                )
+                | (Self::FromStringError, Self::FromStringError)
+                | (Self::UndefinedExtraData, Self::UndefinedExtraData)
+        )
     }
 }
 
 impl Error {
-    fn to_string(&self) -> String {
+    fn as_string(&self) -> String {
         match self {
             Self::InMemoryDataError => "InMemoryDataError",
             Self::TimeStringUnknownOperator => "Unknown Operator",
@@ -51,13 +54,13 @@ impl std::error::Error for Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.as_string())
     }
 }
 
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.as_string())
     }
 }
 

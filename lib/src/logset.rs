@@ -34,7 +34,7 @@ impl LogSet {
         let mut r = vec![];
         reader.read_to_end(&mut r)?;
         let s = str::from_utf8(&r)?;
-        Ok(Self::deserialize(&s)?)
+        Self::deserialize(s)
     }
 
     pub fn deserialize(s: &str) -> Result<Self, Error> {
@@ -59,6 +59,10 @@ impl LogSet {
 
     pub fn len(&self) -> usize {
         self.logs.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub async fn update(

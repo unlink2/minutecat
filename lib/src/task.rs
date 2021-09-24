@@ -142,7 +142,7 @@ impl Task {
             let op = Self::scan_operator(time_str, start, &mut current, &operators)?;
             result += num * op;
         }
-        return Ok(result);
+        Ok(result)
     }
 
     fn scan_operator(
@@ -157,9 +157,9 @@ impl Task {
         // no operator? return 1, but only if
         // current is end of string too
         if start == *current && *current >= time_str.len() {
-            return Ok(1);
+            Ok(1)
         } else if start == *current {
-            return Err(Error::TimeStringUnknownOperator);
+            Err(Error::TimeStringUnknownOperator)
         } else {
             let operator = &time_str[start..*current];
             match operators.get(operator) {
@@ -179,11 +179,11 @@ impl Task {
     }
 
     pub fn is_numeric(c: char) -> bool {
-        c >= '0' && c <= '9'
+        ('0'..='9').contains(&c)
     }
 
     pub fn is_alpha(c: char) -> bool {
-        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+        ('a'..='z').contains(&c) || ('A'..='Z').contains(&c)
     }
 
     pub fn next_time(&self) -> u128 {
@@ -208,10 +208,10 @@ impl Task {
 
         for (key, value) in operators {
             result = format!("{}{}{}", result, remainder / value, key);
-            remainder = remainder % value;
+            remainder %= value;
         }
 
-        return result;
+        result
     }
 }
 

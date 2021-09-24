@@ -237,16 +237,16 @@ where
             let block = Block::default().borders(Borders::NONE);
             f.render_widget(block, size);
 
-            Self::render_tabs(&mut f, &tab_manager, &chunks[0]);
+            Self::render_tabs(&mut f, tab_manager, &chunks[0]);
 
-            if tab_manager.state.len() == 0 {
-                Self::render_no_logs(&mut f, &tab_manager, &chunks[1]);
+            if tab_manager.state.is_empty() {
+                Self::render_no_logs(&mut f, tab_manager, &chunks[1]);
             } else {
-                Self::render_content(&mut f, &tab_manager, &chunks[1]);
+                Self::render_content(&mut f, tab_manager, &chunks[1]);
                 // render info about matches
-                Self::render_info(&mut f, &tab_manager, &chunks[2]);
+                Self::render_info(&mut f, tab_manager, &chunks[2]);
             }
-            Self::render_help(&mut f, &tab_manager, &chunks[3]);
+            Self::render_help(&mut f, tab_manager, &chunks[3]);
         })?;
         Ok(())
     }
