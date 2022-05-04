@@ -1,4 +1,4 @@
-use super::clap::{AppSettings, Clap};
+use super::clap::{Args, Parser, Subcommand};
 use super::command::*;
 use super::dirs;
 use super::error::Error;
@@ -25,36 +25,29 @@ pub struct Interface {
     pub cfg_path: String,
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
-#[clap(setting = AppSettings::ColoredHelp)]
 pub struct Opts {
     #[clap(subcommand)]
     subcmd: Option<SubCommand>,
 }
 
-#[derive(Clap)]
+#[derive(Subcommand)]
 pub enum SubCommand {
-    #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
     Add(Add),
 
-    #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
     List(List),
 
-    #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
     Delete(Delete),
 
-    #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
     AddReTrigger(AddReTrigger),
 
-    #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
     ListTrigger(ListTrigger),
 
-    #[clap(version = "0.1.0", author = "Lukas Krickl <lukas@krickl.dev>")]
     DeleteTrigger(DeleteTrigger),
 }
 
-#[derive(Clap)]
+#[derive(Args)]
 pub struct Add {
     name: String,
     location: String,
@@ -63,15 +56,15 @@ pub struct Add {
     refresh_time: String,
 }
 
-#[derive(Clap)]
+#[derive(Args)]
 pub struct List;
 
-#[derive(Clap)]
+#[derive(Args)]
 pub struct Delete {
     pub index: usize,
 }
 
-#[derive(Clap)]
+#[derive(Args)]
 pub struct AddReTrigger {
     pub index: usize,
     pub name: String,
@@ -82,12 +75,12 @@ pub struct AddReTrigger {
     pub invert: bool,
 }
 
-#[derive(Clap)]
+#[derive(Args)]
 pub struct ListTrigger {
     pub index: usize,
 }
 
-#[derive(Clap)]
+#[derive(Args)]
 pub struct DeleteTrigger {
     pub log_index: usize,
     pub trigger_index: usize,

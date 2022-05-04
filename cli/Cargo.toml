@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 minutecat = {path = "../lib"}
-clap = "3.0.0-beta.2"
+clap = {version = "3.1.10", features=["derive"]}
 tui = "0.15"
 termion = "1.5"
 chrono = "0.4.19"
